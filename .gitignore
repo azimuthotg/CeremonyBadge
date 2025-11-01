@@ -35,6 +35,9 @@ Thumbs.db
 .env
 .env.local
 
+# Git credentials (local only)
+.git-credentials.txt
+
 # Database
 *.sql
 *.sqlite
