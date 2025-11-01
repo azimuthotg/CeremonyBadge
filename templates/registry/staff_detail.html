@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}รายละเอียดบุคลากร{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-person-badge"></i> รายละเอียดบุคลากร</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'registry:staff_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> ย้อนกลับ
+            </a>
+            <a href="{% url 'registry:wizard_step1' staff_profile.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> แก้ไข
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Photo and Basic Info -->
+        <div class="col-md-4">
+            <!-- Photo Card -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    {% if photo.cropped_photo %}
+                        <img src="{{ photo.cropped_photo.url }}" alt="Photo" class="img-fluid rounded mb-3" style="max-width: 100%;">
+                    {% elif photo.original_photo %}
+                        <img src="{{ photo.original_photo.url }}" alt="Photo" class="img-fluid rounded mb-3" style="max-width: 100%;">
+                    {% else %}
+                        <div class="py-5 bg-light rounded mb-3">
+                            <i class="bi bi-person-circle" style="font-size: 6rem; color: #ccc;"></i>
+                        </div>
+                    {% endif %}
+
+                    <h4>{{ staff_profile.full_name }}</h4>
+                    <p class="text-muted">{{ staff_profile.position }}</p>
+
+                    <div class="mb-3">
+                        <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }}; font-size: 1rem; padding: 8px 16px;">
+                            {{ staff_profile.badge_type.name }}
+                        </span>
+                    </div>
+
+                    {% if badge_request %}
+                    <div>
+                        <span class="badge-status {{ badge_request.status }}" style="font-size: 0.9rem;">
+                            {{ badge_request.get_status_display }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="bi bi-lightning-charge-fill"></i> การดำเนินการ</strong>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'registry:wizard_step1' staff_profile.id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> แก้ไขข้อมูล
+                        </a>
+                        {% if photo %}
+                        <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-camera"></i> เปลี่ยนรูปถ่าย
+                        </a>
+                        {% else %}
+                        <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-warning">
+                            <i class="bi bi-camera"></i> อัปโหลดรูปถ่าย
+                        </a>
+                        {% endif %}
+
+                        {% if badge_request and badge_request.status == 'ready_to_submit' %}
+                        <a href="{% url 'registry:wizard_submit' badge_request.id %}" class="btn btn-success">
+                            <i class="bi bi-send"></i> ส่งคำขอ
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Detailed Information -->
+        <div class="col-md-8">
+            <!-- Personal Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <strong><i class="bi bi-person-vcard"></i> ข้อมูลส่วนตัว</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="info-item">
+                                <label>คำนำหน้า</label>
+                                <div>{{ staff_profile.get_title_display }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-item">
+                                <label>ชื่อ</label>
+                                <div>{{ staff_profile.first_name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-item">
+                                <label>นามสกุล</label>
+                                <div>{{ staff_profile.last_name }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Work Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <strong><i class="bi bi-briefcase"></i> ข้อมูลการทำงาน</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>ตำแหน่ง</label>
+                                <div>{{ staff_profile.position }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>หน่วยงาน</label>
+                                <div>{{ staff_profile.department.name }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="info-item">
+                                <label>ประเภทบัตร</label>
+                                <div>
+                                    <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }};">
+                                        {{ staff_profile.badge_type.name }}
+                                    </span>
+                                    <span class="text-muted ms-2">{{ staff_profile.badge_type.description }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <strong><i class="bi bi-telephone"></i> ข้อมูลติดต่อ</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>เบอร์โทรศัพท์</label>
+                                <div>{{ staff_profile.phone|default:"-" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>อีเมล</label>
+                                <div>{{ staff_profile.email|default:"-" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if staff_profile.notes %}
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="info-item">
+                                <label>หมายเหตุ</label>
+                                <div>{{ staff_profile.notes }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Request Status (if exists) -->
+            {% if badge_request %}
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="bi bi-clock-history"></i> ประวัติคำขอ</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>สถานะ</label>
+                                <div>
+                                    <span class="badge-status {{ badge_request.status }}">
+                                        {{ badge_request.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>สร้างเมื่อ</label>
+                                <div>{{ badge_request.created_at|date:"d/m/Y H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if badge_request.submitted_at %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>ส่งโดย</label>
+                                <div>{{ badge_request.submitted_by.get_full_name|default:badge_request.submitted_by.username }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>ส่งเมื่อ</label>
+                                <div>{{ badge_request.submitted_at|date:"d/m/Y H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if badge_request.remarks %}
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="info-item">
+                                <label>หมายเหตุ</label>
+                                <div class="alert alert-warning">
+                                    {{ badge_request.remarks }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.info-item {
+    margin-bottom: 15px;
+}
+
+.info-item label {
+    display: block;
+    font-size: 0.85rem;
+    color: #6B7280;
+    margin-bottom: 4px;
+}
+
+.info-item div {
+    font-weight: 500;
+    color: #1F2937;
+}
+</style>
+{% endblock %}

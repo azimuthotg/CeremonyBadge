@@ -1,0 +1,130 @@
+<!-- Submitter Dashboard -->
+<div class="row g-4 mb-4">
+    <!-- Stats Cards -->
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-icon text-primary-custom">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-value">{{ total_staff|default:0 }}</div>
+            <div class="stat-label">บุคลากรทั้งหมด</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="stat-icon" style="color: var(--warning-dark);">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="stat-value">{{ pending_requests|default:0 }}</div>
+            <div class="stat-label">รอดำเนินการ</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #3B82F6;">
+            <div class="stat-icon" style="color: #3B82F6;">
+                <i class="bi bi-send-fill"></i>
+            </div>
+            <div class="stat-value">{{ submitted_requests|default:0 }}</div>
+            <div class="stat-label">ส่งตรวจสอบแล้ว</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="stat-icon" style="color: var(--success-dark);">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div class="stat-value">{{ approved_badges|default:0 }}</div>
+            <div class="stat-label">อนุมัติแล้ว</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightning-charge-fill"></i> เมนูด่วน
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="{% url 'registry:wizard_step1' %}" class="btn btn-primary w-100 btn-lg">
+                            <i class="bi bi-person-plus-fill"></i> ลงทะเบียนบุคลากรใหม่
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'registry:staff_list' %}" class="btn btn-outline-primary w-100 btn-lg">
+                            <i class="bi bi-list-check"></i> รายการบุคลากร
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="#" class="btn btn-outline-primary w-100 btn-lg">
+                            <i class="bi bi-file-earmark-bar-graph"></i> รายงาน
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Staff -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> บุคลากรที่เพิ่มล่าสุด
+            </div>
+            <div class="card-body">
+                {% if recent_staff %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ชื่อ-นามสกุล</th>
+                                <th>ตำแหน่ง</th>
+                                <th>ประเภทบัตร</th>
+                                <th>สถานะ</th>
+                                <th>เพิ่มเมื่อ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for staff in recent_staff %}
+                            <tr>
+                                <td>{{ staff.full_name }}</td>
+                                <td>{{ staff.position }}</td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ staff.badge_type.color_code }};">
+                                        {{ staff.badge_type.name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if staff.badge_request %}
+                                    <span class="badge-status {{ staff.badge_request.status }}">
+                                        {{ staff.badge_request.get_status_display }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge-status draft">ยังไม่มีคำขอ</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ staff.created_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-2">ยังไม่มีข้อมูลบุคลากร</p>
+                    <a href="#" class="btn btn-primary">เริ่มลงทะเบียน</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

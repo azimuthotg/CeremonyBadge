@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}ยืนยันการส่งคำขอ{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill"></i> ยืนยันการส่งคำขอ
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">คุณต้องการส่งคำขอสำหรับบุคลากรท่านนี้หรือไม่?</p>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h5 class="mb-3">{{ badge_request.staff_profile.full_name }}</h5>
+                            <p class="mb-2">
+                                <strong>ตำแหน่ง:</strong> {{ badge_request.staff_profile.position }}<br>
+                                <strong>หน่วยงาน:</strong> {{ badge_request.staff_profile.department.name }}<br>
+                                <strong>ประเภทบัตร:</strong>
+                                <span class="badge" style="background-color: {{ badge_request.staff_profile.badge_type.color_code }};">
+                                    {{ badge_request.staff_profile.badge_type.name }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        เมื่อส่งคำขอแล้ว เจ้าหน้าที่จะทำการตรวจสอบข้อมูล หากพบข้อผิดพลาดหรือต้องการแก้ไข จะมีการส่งกลับให้แก้ไข
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'registry:staff_list' %}" class="btn btn-outline-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg flex-grow-1">
+                                <i class="bi bi-send-fill"></i> ยืนยันส่งคำขอ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

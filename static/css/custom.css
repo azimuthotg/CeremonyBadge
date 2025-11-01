@@ -1,0 +1,426 @@
+/*
+ * NPU Ceremony Badge System - Custom CSS
+ * Purple Pastel Theme
+ */
+
+:root {
+    /* Primary Colors - Purple Pastel */
+    --primary-color: #A78BFA;
+    --primary-light: #C4B5FD;
+    --primary-dark: #7C3AED;
+
+    /* Secondary Colors */
+    --secondary-color: #E9D8FD;
+    --secondary-light: #FAF5FF;
+
+    /* Success - Green Pastel */
+    --success-color: #A7F3D0;
+    --success-dark: #6BCB77;
+
+    /* Warning - Yellow Pastel */
+    --warning-color: #FDE68A;
+    --warning-dark: #FFD93D;
+
+    /* Danger - Pink Pastel */
+    --danger-color: #FECACA;
+    --danger-dark: #FF6B6B;
+
+    /* Badge Colors */
+    --badge-pink: #FFC0CB;
+    --badge-red: #FF6B6B;
+    --badge-yellow: #FFD93D;
+    --badge-green: #6BCB77;
+
+    /* Neutral Colors */
+    --white: #FFFFFF;
+    --black: #212529;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-500: #6B7280;
+    --gray-700: #374151;
+}
+
+/* Body and General Styles */
+body {
+    font-family: 'Sarabun', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--gray-100);
+    color: var(--black);
+}
+
+/* Bootstrap Overrides */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-success {
+    background-color: var(--success-dark);
+    border-color: var(--success-dark);
+}
+
+.btn-warning {
+    background-color: var(--warning-dark);
+    border-color: var(--warning-dark);
+    color: var(--black);
+}
+
+.btn-danger {
+    background-color: var(--danger-dark);
+    border-color: var(--danger-dark);
+}
+
+/* Card Styles */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(167, 139, 250, 0.15);
+}
+
+.card-header {
+    background-color: var(--primary-color);
+    color: var(--white);
+    border-radius: 12px 12px 0 0 !important;
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+}
+
+/* Navbar Styles */
+.navbar-custom {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-custom .navbar-brand {
+    color: var(--white) !important;
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+.navbar-custom .nav-link {
+    color: var(--white) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.navbar-custom .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-custom .dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: var(--white);
+    min-height: calc(100vh - 60px);
+    padding: 1.5rem 0;
+    border-right: 1px solid var(--gray-200);
+}
+
+.sidebar .nav-link {
+    color: var(--gray-700);
+    padding: 0.75rem 1.5rem;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.sidebar .nav-link:hover {
+    background-color: var(--secondary-light);
+    border-left-color: var(--primary-color);
+    color: var(--primary-dark);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--secondary-light);
+    border-left-color: var(--primary-color);
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.sidebar .nav-link i {
+    width: 24px;
+    text-align: center;
+    margin-right: 0.5rem;
+}
+
+/* Dashboard Stats Cards */
+.stat-card {
+    background: linear-gradient(135deg, var(--white) 0%, var(--gray-100) 100%);
+    border-left: 4px solid var(--primary-color);
+    padding: 1.5rem;
+    border-radius: 12px;
+}
+
+.stat-card.success {
+    border-left-color: var(--success-dark);
+}
+
+.stat-card.warning {
+    border-left-color: var(--warning-dark);
+}
+
+.stat-card.danger {
+    border-left-color: var(--danger-dark);
+}
+
+.stat-card .stat-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--black);
+}
+
+.stat-card .stat-label {
+    color: var(--gray-500);
+    font-size: 0.9rem;
+}
+
+/* Badge Status */
+.badge-status {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.badge-status.draft {
+    background-color: var(--gray-200);
+    color: var(--gray-700);
+}
+
+.badge-status.submitted {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+}
+
+.badge-status.approved {
+    background-color: var(--success-color);
+    color: #047857;
+}
+
+.badge-status.rejected {
+    background-color: var(--danger-color);
+    color: #DC2626;
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(167, 139, 250, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+}
+
+/* Wizard Steps */
+.wizard-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.wizard-steps::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--gray-300);
+    z-index: 0;
+}
+
+.wizard-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.wizard-step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--white);
+    border: 3px solid var(--gray-300);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s;
+}
+
+.wizard-step.active .wizard-step-circle {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+.wizard-step.completed .wizard-step-circle {
+    background-color: var(--success-dark);
+    border-color: var(--success-dark);
+    color: var(--white);
+}
+
+.wizard-step-label {
+    font-size: 0.9rem;
+    color: var(--gray-500);
+}
+
+.wizard-step.active .wizard-step-label {
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+/* Table Styles */
+.table-custom {
+    background-color: var(--white);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table-custom thead {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
+
+.table-custom tbody tr:hover {
+    background-color: var(--secondary-light);
+}
+
+/* Image Upload Preview */
+.image-preview {
+    border: 2px dashed var(--gray-300);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.image-preview:hover {
+    border-color: var(--primary-color);
+    background-color: var(--secondary-light);
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 8px;
+}
+
+/* Alert Styles */
+.alert {
+    border-radius: 12px;
+    border: none;
+}
+
+.alert-success {
+    background-color: var(--success-color);
+    color: #047857;
+}
+
+.alert-warning {
+    background-color: var(--warning-color);
+    color: #92400E;
+}
+
+.alert-danger {
+    background-color: var(--danger-color);
+    color: #DC2626;
+}
+
+.alert-info {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    border: 4px solid var(--gray-200);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        min-height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .wizard-steps {
+        flex-direction: column;
+    }
+
+    .wizard-steps::before {
+        display: none;
+    }
+
+    .wizard-step {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Utility Classes */
+.text-primary-custom {
+    color: var(--primary-color) !important;
+}
+
+.bg-primary-custom {
+    background-color: var(--primary-color) !important;
+}
+
+.border-primary-custom {
+    border-color: var(--primary-color) !important;
+}
+
+/* Animation */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

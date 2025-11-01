@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}ลงทะเบียนบุคลากร - ขั้นตอนที่ 2{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Wizard Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="wizard-progress">
+                <div class="wizard-step completed">
+                    <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+                    <div class="wizard-step-label">ข้อมูลบุคลากร</div>
+                </div>
+                <div class="wizard-step active">
+                    <div class="wizard-step-number">2</div>
+                    <div class="wizard-step-label">อัปโหลดรูปถ่าย</div>
+                </div>
+                <div class="wizard-step">
+                    <div class="wizard-step-number">3</div>
+                    <div class="wizard-step-label">ตรวจสอบข้อมูล</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Info Card -->
+    <div class="row mb-4">
+        <div class="col-lg-10 mx-auto">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5><i class="bi bi-person-badge"></i> {{ staff_profile.full_name }}</h5>
+                            <p class="mb-0">
+                                <strong>ตำแหน่ง:</strong> {{ staff_profile.position }}<br>
+                                <strong>ประเภทบัตร:</strong>
+                                <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }};">
+                                    {{ staff_profile.badge_type.name }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'registry:wizard_step1' staff_profile.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> แก้ไขข้อมูล
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Upload Card -->
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-camera-fill"></i> อัปโหลดรูปถ่าย
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="photo-form">
+                        {% csrf_token %}
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>คำแนะนำ:</strong>
+                            กรุณาเลือกรูปถ่ายที่ชัดเจน หน้าตรง พื้นหลังสีขาวหรือสีอ่อน ไฟล์ไม่เกิน 5MB
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_original_photo" class="form-label">เลือกรูปถ่าย</label>
+                            {{ form.original_photo }}
+                        </div>
+
+                        <!-- Image Preview & Crop Container -->
+                        <div id="crop-container" style="display:none;">
+                            <h6 class="mt-4">ครอปรูปภาพ:</h6>
+                            <p class="text-muted small">ลากเพื่อเลือกส่วนที่ต้องการ (อัตราส่วน 3:4)</p>
+                            <div class="text-center mb-3">
+                                <img id="image-to-crop" src="" style="max-width: 100%; display: block;">
+                            </div>
+                            <div class="text-center mb-3">
+                                <button type="button" id="btn-rotate-left" class="btn btn-sm btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-counterclockwise"></i> หมุนซ้าย
+                                </button>
+                                <button type="button" id="btn-rotate-right" class="btn btn-sm btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-clockwise"></i> หมุนขวา
+                                </button>
+                                <button type="button" id="btn-reset" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-arrow-clockwise"></i> รีเซ็ต
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Hidden fields for crop data -->
+                        <input type="hidden" id="crop_x" name="crop_x">
+                        <input type="hidden" id="crop_y" name="crop_y">
+                        <input type="hidden" id="crop_width" name="crop_width">
+                        <input type="hidden" id="crop_height" name="crop_height">
+
+                        <!-- Buttons -->
+                        <div class="mt-4 d-flex gap-2">
+                            <a href="{% url 'registry:wizard_step1' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-arrow-left-circle"></i> ย้อนกลับ
+                            </a>
+                            <button type="submit" id="btn-submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="bi bi-arrow-right-circle"></i> ต่อไป: ตรวจสอบข้อมูล
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Wizard Progress Styles */
+.wizard-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    padding: 20px 0;
+}
+
+.wizard-progress::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background-color: #E5E7EB;
+    z-index: 0;
+}
+
+.wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+}
+
+.wizard-step-number {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #E5E7EB;
+    color: #6B7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.wizard-step.active .wizard-step-number {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2);
+}
+
+.wizard-step.completed .wizard-step-number {
+    background-color: var(--success-dark);
+    color: white;
+}
+
+.wizard-step-label {
+    font-size: 0.9rem;
+    color: #6B7280;
+    text-align: center;
+}
+
+.wizard-step.active .wizard-step-label {
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+/* Cropper Container */
+#crop-container {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+    .wizard-step-label {
+        font-size: 0.8rem;
+    }
+    .wizard-step-number {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+<script>
+let cropper = null;
+
+document.getElementById('id_original_photo').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('ไฟล์รูปภาพต้องมีขนาดไม่เกิน 5MB');
+            e.target.value = '';
+            return;
+        }
+
+        // Validate file type
+        if (!file.type.match('image.*')) {
+            alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+            e.target.value = '';
+            return;
+        }
+
+        // Show crop container
+        const cropContainer = document.getElementById('crop-container');
+        cropContainer.style.display = 'block';
+
+        // Load image
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const image = document.getElementById('image-to-crop');
+            image.src = event.target.result;
+
+            // Destroy previous cropper if exists
+            if (cropper) {
+                cropper.destroy();
+            }
+
+            // Initialize Cropper.js with 3:4 aspect ratio
+            cropper = new Cropper(image, {
+                aspectRatio: 3 / 4,
+                viewMode: 1,
+                autoCropArea: 0.8,
+                responsive: true,
+                background: false,
+                crop(event) {
+                    // Update hidden fields with crop data
+                    document.getElementById('crop_x').value = Math.round(event.detail.x);
+                    document.getElementById('crop_y').value = Math.round(event.detail.y);
+                    document.getElementById('crop_width').value = Math.round(event.detail.width);
+                    document.getElementById('crop_height').value = Math.round(event.detail.height);
+                }
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Rotate left button
+document.getElementById('btn-rotate-left').addEventListener('click', function() {
+    if (cropper) {
+        cropper.rotate(-90);
+    }
+});
+
+// Rotate right button
+document.getElementById('btn-rotate-right').addEventListener('click', function() {
+    if (cropper) {
+        cropper.rotate(90);
+    }
+});
+
+// Reset button
+document.getElementById('btn-reset').addEventListener('click', function() {
+    if (cropper) {
+        cropper.reset();
+    }
+});
+
+// Form submission validation
+document.getElementById('photo-form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('id_original_photo');
+    if (!fileInput.files || !fileInput.files[0]) {
+        e.preventDefault();
+        alert('กรุณาเลือกรูปถ่าย');
+        return false;
+    }
+
+    // Check if crop data exists
+    const cropX = document.getElementById('crop_x').value;
+    if (!cropX) {
+        e.preventDefault();
+        alert('กรุณารอให้โหลดรูปภาพเสร็จ');
+        return false;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+# Python
+*.py[cod]
+*$py.class
+*.so
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+Ceremony_env/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/media/
+/staticfiles/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Database
+*.sql
+*.sqlite
+
+# Migrations (keep the files but ignore if needed)
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Temporary files
+*.tmp
+*.bak
+
+# PDF requirements (keep in repo)
+!requirement.pdf
+
+# Images (keep uploaded images but ignore temp)
+*.jpg.tmp
+*.png.tmp

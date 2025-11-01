@@ -1,0 +1,37 @@
+<!-- Admin Dashboard - Same as Officer but with System Settings access -->
+{% include 'dashboard/officer_dashboard.html' %}
+
+<!-- Additional Admin Section -->
+<div class="row g-4 mt-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-shield-lock-fill"></i> การจัดการระบบ (Admin Only)
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="/admin/" class="btn btn-outline-dark w-100">
+                            <i class="bi bi-gear-fill"></i> Django Admin
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-dark w-100">
+                            <i class="bi bi-people-fill"></i> จัดการผู้ใช้
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-dark w-100">
+                            <i class="bi bi-building"></i> จัดการหน่วยงาน
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-dark w-100">
+                            <i class="bi bi-sliders"></i> ตั้งค่าระบบ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

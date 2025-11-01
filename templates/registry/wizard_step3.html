@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}ลงทะเบียนบุคลากร - ขั้นตอนที่ 3{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Wizard Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="wizard-progress">
+                <div class="wizard-step completed">
+                    <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+                    <div class="wizard-step-label">ข้อมูลบุคลากร</div>
+                </div>
+                <div class="wizard-step completed">
+                    <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+                    <div class="wizard-step-label">อัปโหลดรูปถ่าย</div>
+                </div>
+                <div class="wizard-step active">
+                    <div class="wizard-step-number">3</div>
+                    <div class="wizard-step-label">ตรวจสอบข้อมูล</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Card -->
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i> ตรวจสอบข้อมูลก่อนส่ง
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Photo Preview -->
+                    <div class="text-center mb-4">
+                        {% if photo.cropped_photo %}
+                            <img src="{{ photo.cropped_photo.url }}" alt="Photo" class="img-thumbnail" style="max-width: 300px;">
+                        {% elif photo.original_photo %}
+                            <img src="{{ photo.original_photo.url }}" alt="Photo" class="img-thumbnail" style="max-width: 300px;">
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> ไม่พบรูปถ่าย
+                            </div>
+                        {% endif %}
+                        <div class="mt-2">
+                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> เปลี่ยนรูป
+                            </a>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Staff Information -->
+                    <h5 class="mb-3"><i class="bi bi-person-badge"></i> ข้อมูลบุคลากร</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>ชื่อ-นามสกุล</label>
+                                <div>{{ staff_profile.get_title_display }} {{ staff_profile.first_name }} {{ staff_profile.last_name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>ตำแหน่ง</label>
+                                <div>{{ staff_profile.position }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>หน่วยงาน</label>
+                                <div>{{ staff_profile.department.name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>ประเภทบัตร</label>
+                                <div>
+                                    <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }};">
+                                        {{ staff_profile.badge_type.name }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>เบอร์โทรศัพท์</label>
+                                <div>{{ staff_profile.phone|default:"-" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <label>อีเมล</label>
+                                <div>{{ staff_profile.email|default:"-" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if staff_profile.notes %}
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="info-item">
+                                <label>หมายเหตุ</label>
+                                <div>{{ staff_profile.notes }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-2">
+                        <a href="{% url 'registry:wizard_step1' staff_profile.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i> แก้ไขข้อมูล
+                        </a>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="confirm" name="confirm" required>
+                            <label class="form-check-label" for="confirm">
+                                <strong>ฉันยืนยันว่าข้อมูลทั้งหมดถูกต้องและครบถ้วน</strong>
+                            </label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-arrow-left-circle"></i> ย้อนกลับ
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg flex-grow-1">
+                                <i class="bi bi-check-circle"></i> บันทึกและพร้อมส่ง
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Wizard Progress Styles */
+.wizard-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    padding: 20px 0;
+}
+
+.wizard-progress::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background-color: #E5E7EB;
+    z-index: 0;
+}
+
+.wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+}
+
+.wizard-step-number {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #E5E7EB;
+    color: #6B7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.wizard-step.active .wizard-step-number {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2);
+}
+
+.wizard-step.completed .wizard-step-number {
+    background-color: var(--success-dark);
+    color: white;
+}
+
+.wizard-step-label {
+    font-size: 0.9rem;
+    color: #6B7280;
+    text-align: center;
+}
+
+.wizard-step.active .wizard-step-label {
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+/* Info Item Styles */
+.info-item {
+    margin-bottom: 15px;
+}
+
+.info-item label {
+    display: block;
+    font-size: 0.85rem;
+    color: #6B7280;
+    margin-bottom: 4px;
+}
+
+.info-item div {
+    font-weight: 500;
+    color: #1F2937;
+}
+
+@media (max-width: 768px) {
+    .wizard-step-label {
+        font-size: 0.8rem;
+    }
+    .wizard-step-number {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+}
+</style>
+{% endblock %}

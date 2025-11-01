@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}เข้าสู่ระบบ{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+        <div class="card shadow-lg fade-in">
+            <div class="card-header text-center py-4">
+                <i class="bi bi-award-fill" style="font-size: 3rem;"></i>
+                <h4 class="mt-3 mb-0">ระบบออกบัตรผู้ปฏิบัติงานพิธี</h4>
+                <p class="mb-0 mt-2" style="font-size: 0.9rem; opacity: 0.9;">
+                    พิธีพระราชทานปริญญาบัตร ปี 2567
+                </p>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">
+                            <i class="bi bi-person"></i> ชื่อผู้ใช้
+                        </label>
+                        <input type="text"
+                               name="username"
+                               id="id_username"
+                               class="form-control form-control-lg {% if form.username.errors %}is-invalid{% endif %}"
+                               placeholder="กรอกชื่อผู้ใช้"
+                               required
+                               autofocus>
+                        {% if form.username.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.username.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="id_password" class="form-label">
+                            <i class="bi bi-lock"></i> รหัสผ่าน
+                        </label>
+                        <input type="password"
+                               name="password"
+                               id="id_password"
+                               class="form-control form-control-lg {% if form.password.errors %}is-invalid{% endif %}"
+                               placeholder="กรอกรหัสผ่าน"
+                               required>
+                        {% if form.password.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.password.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                        <label class="form-check-label" for="remember_me">
+                            จดจำการเข้าสู่ระบบ
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                        <i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบ
+                    </button>
+
+                    <div class="text-center">
+                        <a href="#" class="text-muted text-decoration-none">
+                            <small><i class="bi bi-question-circle"></i> ลืมรหัสผ่าน?</small>
+                        </a>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center py-3 bg-light">
+                <small class="text-muted">
+                    <i class="bi bi-building"></i> มหาวิทยาลัยนครพนม
+                </small>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <p class="text-muted">
+                <i class="bi bi-info-circle"></i>
+                ติดต่อสอบถาม: สำนักวิทยบริการและเทคโนโลยีสารสนเทศ
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card {
+        border-radius: 16px;
+        border: none;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%);
+        color: white;
+        border-radius: 16px 16px 0 0 !important;
+    }
+
+    .form-control-lg {
+        border-radius: 8px;
+    }
+
+    .btn-lg {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

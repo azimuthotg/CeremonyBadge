@@ -1,0 +1,190 @@
+<!-- Officer/Admin Dashboard -->
+<div class="row g-4 mb-4">
+    <!-- Stats Cards -->
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-icon text-primary-custom">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-value">{{ total_staff|default:0 }}</div>
+            <div class="stat-label">บุคลากรทั้งหมด</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="stat-icon" style="color: var(--warning-dark);">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div class="stat-value">{{ pending_review|default:0 }}</div>
+            <div class="stat-label">รอตรวจสอบ</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="stat-icon" style="color: var(--success-dark);">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div class="stat-value">{{ approved_today|default:0 }}</div>
+            <div class="stat-label">อนุมัติวันนี้</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #8B5CF6;">
+            <div class="stat-icon" style="color: #8B5CF6;">
+                <i class="bi bi-award-fill"></i>
+            </div>
+            <div class="stat-value">{{ total_badges|default:0 }}</div>
+            <div class="stat-label">บัตรทั้งหมด</div>
+        </div>
+    </div>
+</div>
+
+<!-- Badge Statistics -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-pie-chart-fill"></i> สถิติบัตรตามประเภท
+            </div>
+            <div class="card-body">
+                {% if badge_stats %}
+                    {% for stat in badge_stats %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="badge" style="background-color: {{ stat.badge_type__color_code }};">
+                                {{ stat.badge_type__name }}
+                            </span>
+                        </div>
+                        <div class="fw-bold">{{ stat.total }} บัตร</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-2">ยังไม่มีข้อมูลบัตร</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-bar-chart-fill"></i> สถิติการพิมพ์
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <div>
+                        <i class="bi bi-printer-fill text-success"></i>
+                        พิมพ์แล้ว
+                    </div>
+                    <div class="fw-bold text-success">{{ printed_badges|default:0 }} บัตร</div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-hourglass text-warning"></i>
+                        ยังไม่ได้พิมพ์
+                    </div>
+                    <div class="fw-bold text-warning">{{ total_badges|default:0|add:0|add:printed_badges|default:0|add:"-" }} บัตร</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightning-charge-fill"></i> เมนูด่วน
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-primary w-100">
+                            <i class="bi bi-card-checklist"></i> ตรวจสอบคำขอ
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-award"></i> จัดการบัตร
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-printer"></i> พิมพ์บัตร
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="#" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-file-earmark-bar-graph"></i> รายงาน
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Requests -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> คำขอที่รอตรวจสอบ
+            </div>
+            <div class="card-body">
+                {% if pending_requests_list %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ชื่อ-นามสกุล</th>
+                                <th>หน่วยงาน</th>
+                                <th>ประเภทบัตร</th>
+                                <th>สถานะ</th>
+                                <th>ส่งเมื่อ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for request in pending_requests_list %}
+                            <tr>
+                                <td>{{ request.staff_profile.full_name }}</td>
+                                <td>{{ request.staff_profile.department.name }}</td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ request.staff_profile.badge_type.color_code }};">
+                                        {{ request.staff_profile.badge_type.name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge-status {{ request.status }}">
+                                        {{ request.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ request.submitted_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye"></i> ตรวจสอบ
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--success-dark);"></i>
+                    <p class="mt-2">ไม่มีคำขอที่รอตรวจสอบ</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
