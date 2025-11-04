@@ -34,6 +34,11 @@ class BadgeType(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_color_display()})"
 
+    def requires_photo(self):
+        """ตรวจสอบว่าประเภทบัตรนี้ต้องการรูปภาพหรือไม่"""
+        # Yellow และ Green ไม่ต้องมีรูป
+        return self.color not in ['yellow', 'green']
+
 
 class BadgeTemplate(models.Model):
     """แม่แบบบัตร"""

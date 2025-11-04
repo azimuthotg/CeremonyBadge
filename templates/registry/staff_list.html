@@ -84,8 +84,11 @@
                                             <a href="{% url 'registry:staff_detail' staff.id %}" class="btn btn-outline-primary" title="ดูรายละเอียด">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{% url 'registry:wizard_step1' staff.id %}" class="btn btn-outline-secondary" title="แก้ไข">
+                                            <a href="{% url 'registry:wizard_step1_edit' staff.id %}" class="btn btn-outline-secondary" title="แก้ไข">
                                                 <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'registry:staff_delete' staff.id %}" class="btn btn-outline-danger" title="ลบ">
+                                                <i class="bi bi-trash"></i>
                                             </a>
                                             {% with request=staff.badge_request.first %}
                                             {% if request and request.status == 'ready_to_submit' %}

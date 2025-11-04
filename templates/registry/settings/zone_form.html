@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}แก้ไข{% else %}เพิ่ม{% endif %}โซนปฏิบัติงาน{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'registry:zone_list' %}">จัดการโซนปฏิบัติงาน</a></li>
+                    <li class="breadcrumb-item active">{% if is_edit %}แก้ไข{% else %}เพิ่ม{% endif %}โซน</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-{% if is_edit %}pencil{% else %}plus-circle{% endif %}"></i> {% if is_edit %}แก้ไขโซน: {{ zone.code }}{% else %}เพิ่มโซนใหม่{% endif %}</h2>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt"></i> ข้อมูลโซนปฏิบัติงาน</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Code and Name -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">รหัสโซน <span class="text-danger">*</span></label>
+                                <input type="text" name="code" class="form-control" value="{% if zone %}{{ zone.code }}{% endif %}" required placeholder="A" maxlength="10" style="text-transform: uppercase;">
+                                <small class="text-muted">เช่น A, B, C</small>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="form-label">ชื่อโซน <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" value="{% if zone %}{{ zone.name }}{% endif %}" required placeholder="กอร.ถปภ. ณ มหาวิทยาลัยนครพนม">
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label class="form-label">คำอธิบาย</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับโซนนี้...">{% if zone %}{{ zone.description }}{% endif %}</textarea>
+                            <small class="text-muted">คำอธิบายจะแสดงในหน้ารายละเอียดบุคลากร</small>
+                        </div>
+
+                        <!-- Work Dates -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">วันที่เริ่มปฏิบัติงาน</label>
+                                <input type="date" name="work_start_date" class="form-control" value="{% if zone.work_start_date %}{{ zone.work_start_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">วันที่สิ้นสุดการปฏิบัติงาน</label>
+                                <input type="date" name="work_end_date" class="form-control" value="{% if zone.work_end_date %}{{ zone.work_end_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                        </div>
+
+                        <!-- Order and Active -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">ลำดับการแสดงผล</label>
+                                <input type="number" name="order" class="form-control" value="{% if zone %}{{ zone.order }}{% else %}{{ next_order }}{% endif %}" min="0">
+                                <small class="text-muted">ใช้สำหรับเรียงลำดับในฟอร์ม</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label d-block">สถานะ</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input type="checkbox" name="is_active" class="form-check-input" id="is_active" {% if not zone or zone.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_active">เปิดใช้งาน</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview -->
+                        {% if zone %}
+                        <div class="mb-4">
+                            <label class="form-label">ตัวอย่างการแสดงผล</label>
+                            <div class="p-3 border rounded bg-light">
+                                <strong>{{ zone.code }} - {{ zone.name }}</strong>
+                                {% if zone.work_start_date and zone.work_end_date %}
+                                <br><small class="text-muted">วันที่ปฏิบัติงาน: {{ zone.work_start_date|date:"d/m/Y" }} - {{ zone.work_end_date|date:"d/m/Y" }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'registry:zone_list' %}" class="btn btn-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-{% if is_edit %}primary{% else %}success{% endif %} btn-lg flex-grow-1">
+                                <i class="bi bi-{% if is_edit %}check-circle{% else %}plus-circle{% endif %}"></i> {% if is_edit %}บันทึก{% else %}สร้างโซน{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if is_edit %}
+            <!-- Staff Count Info -->
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-people"></i>
+                <strong>ข้อมูล:</strong> โซนนี้มีบุคลากรใช้งานอยู่ {{ zone.staff_profiles.count }} คน
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-uppercase code input
+    document.addEventListener('DOMContentLoaded', function() {
+        const codeInput = document.querySelector('input[name="code"]');
+        if (codeInput) {
+            codeInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+            });
+        }
+    });
+</script>
+{% endblock %}

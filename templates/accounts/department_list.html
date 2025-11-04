@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}จัดการหน่วยงาน{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-building text-primary-custom"></i> จัดการหน่วยงาน</h2>
+        <p class="text-muted">จัดการหน่วยงานในระบบ</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'accounts:department_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> เพิ่มหน่วยงานใหม่
+        </a>
+    </div>
+</div>
+
+<!-- สถิติ -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-building fs-1 text-primary-custom"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h3 class="mb-0">{{ total_departments }}</h3>
+                        <p class="text-muted mb-0">หน่วยงานทั้งหมด</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-check-circle fs-1 text-success"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h3 class="mb-0">{{ active_departments }}</h3>
+                        <p class="text-muted mb-0">หน่วยงานที่เปิดใช้งาน</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ค้นหา -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-10">
+                <label class="form-label">ค้นหา</label>
+                <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="ชื่อหน่วยงาน หรือรหัสหน่วยงาน">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> ค้นหา
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ตารางหน่วยงาน -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th width="60">ลำดับ</th>
+                        <th>ชื่อหน่วยงาน</th>
+                        <th>รหัส</th>
+                        <th>รายละเอียด</th>
+                        <th>จำนวนผู้ใช้</th>
+                        <th>สถานะ</th>
+                        <th>วันที่สร้าง</th>
+                        <th class="text-center" width="200">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departments %}
+                    <tr>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ dept.order }}</span>
+                        </td>
+                        <td><strong>{{ dept.name }}</strong></td>
+                        <td><code>{{ dept.code }}</code></td>
+                        <td>{{ dept.description|default:"-"|truncatewords:10 }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ dept.user_count }} คน</span>
+                        </td>
+                        <td>
+                            {% if dept.is_active %}
+                            <span class="badge bg-success">เปิดใช้งาน</span>
+                            {% else %}
+                            <span class="badge bg-secondary">ปิดใช้งาน</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ dept.created_at|date:"d/m/Y" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'accounts:department_edit' dept.id %}" class="btn btn-sm btn-outline-primary" title="แก้ไข">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'accounts:department_delete' dept.id %}" class="btn btn-sm btn-outline-danger" title="ลบ">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            ไม่พบข้อมูลหน่วยงาน
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

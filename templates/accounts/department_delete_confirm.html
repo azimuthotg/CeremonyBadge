@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ยืนยันการลบหน่วยงาน{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'accounts:department_list' %}">จัดการหน่วยงาน</a></li>
+                <li class="breadcrumb-item active">ยืนยันการลบ</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบหน่วยงาน</h5>
+            </div>
+            <div class="card-body">
+                {% if user_count > 0 %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon"></i> <strong>ไม่สามารถลบหน่วยงานนี้ได้!</strong><br>
+                    มีผู้ใช้ <strong>{{ user_count }} คน</strong> อยู่ในหน่วยงานนี้
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i> คุณแน่ใจหรือไม่ว่าต้องการลบหน่วยงานนี้?
+                </div>
+                {% endif %}
+
+                <table class="table">
+                    <tr>
+                        <th width="40%">ชื่อหน่วยงาน:</th>
+                        <td><strong>{{ department.name }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>รหัส:</th>
+                        <td><code>{{ department.code }}</code></td>
+                    </tr>
+                    <tr>
+                        <th>รายละเอียด:</th>
+                        <td>{{ department.description|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>จำนวนผู้ใช้:</th>
+                        <td><span class="badge bg-info">{{ user_count }} คน</span></td>
+                    </tr>
+                    <tr>
+                        <th>สถานะ:</th>
+                        <td>
+                            {% if department.is_active %}
+                            <span class="badge bg-success">เปิดใช้งาน</span>
+                            {% else %}
+                            <span class="badge bg-secondary">ปิดใช้งาน</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+
+                {% if user_count == 0 %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon"></i> <strong>คำเตือน:</strong> การลบหน่วยงานจะไม่สามารถกู้คืนได้!
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'accounts:department_list' %}" class="btn btn-secondary flex-fill">
+                            <i class="bi bi-x-circle"></i> ยกเลิก
+                        </a>
+                        <button type="submit" class="btn btn-danger flex-fill">
+                            <i class="bi bi-trash"></i> ยืนยันการลบ
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="d-grid">
+                    <a href="{% url 'accounts:department_list' %}" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-arrow-left"></i> กลับไปหน้ารายการ
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

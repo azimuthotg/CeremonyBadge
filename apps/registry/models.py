@@ -5,18 +5,68 @@ from imagekit.processors import ResizeToFill
 
 # Create your models here.
 
+class Zone(models.Model):
+    """พื้นที่/โซนปฏิบัติงาน"""
+    code = models.CharField(
+        max_length=10,
+        unique=True,
+        verbose_name="รหัสโซน",
+        help_text="เช่น A, B, C"
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name="ชื่อโซน",
+        help_text="เช่น กอร.ถปภ. ณ ม.นครพนม"
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="คำอธิบาย",
+        help_text="รายละเอียดเพิ่มเติมเกี่ยวกับโซน"
+    )
+    work_start_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="วันที่เริ่มปฏิบัติงาน"
+    )
+    work_end_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="วันที่สิ้นสุดการปฏิบัติงาน"
+    )
+    order = models.IntegerField(
+        default=0,
+        verbose_name="ลำดับการแสดงผล",
+        help_text="ใช้สำหรับเรียงลำดับการแสดงผล"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="ใช้งาน"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="สร้างเมื่อ")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="แก้ไขเมื่อ")
+
+    class Meta:
+        db_table = 'zones'
+        verbose_name = 'โซนปฏิบัติงาน'
+        verbose_name_plural = 'โซนปฏิบัติงาน'
+        ordering = ['order', 'code']
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+    @property
+    def full_description(self):
+        """คำอธิบายแบบเต็ม"""
+        desc = f"{self.name} ({self.code})"
+        if self.work_start_date and self.work_end_date:
+            desc += f" | {self.work_start_date.strftime('%d/%m/%Y')} - {self.work_end_date.strftime('%d/%m/%Y')}"
+        return desc
+
 class StaffProfile(models.Model):
     """ข้อมูลบุคลากรผู้ปฏิบัติงาน"""
-    TITLE_CHOICES = [
-        ('mr', 'นาย'),
-        ('mrs', 'นาง'),
-        ('miss', 'นางสาว'),
-        ('prof', 'ศาสตราจารย์'),
-        ('assoc_prof', 'รองศาสตราจารย์'),
-        ('asst_prof', 'ผู้ช่วยศาสตราจารย์'),
-        ('dr', 'ดร.'),
-    ]
 
+    # ข้อมูลพื้นฐาน
     department = models.ForeignKey(
         'accounts.Department',
         on_delete=models.PROTECT,
@@ -24,21 +74,67 @@ class StaffProfile(models.Model):
         verbose_name="หน่วยงาน"
     )
     title = models.CharField(
-        max_length=20,
-        choices=TITLE_CHOICES,
-        verbose_name="คำนำหน้า"
+        max_length=50,
+        verbose_name="ยศ",
+        help_text="เช่น นาย, นาง, น.ส., พล.อ., พล.ต. ฯลฯ"
     )
     first_name = models.CharField(max_length=100, verbose_name="ชื่อ")
     last_name = models.CharField(max_length=100, verbose_name="นามสกุล")
-    position = models.CharField(max_length=255, verbose_name="ตำแหน่ง")
-    email = models.EmailField(blank=True, null=True, verbose_name="อีเมล")
-    phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="เบอร์โทรศัพท์")
+    national_id = models.CharField(
+        max_length=13,
+        blank=True,
+        null=True,
+        verbose_name="บัตรประชาชน ๑๓ หลัก",
+        help_text="เลขบัตรประชาชน 13 หลัก"
+    )
+
+    # ข้อมูลการทำงาน
+    position = models.CharField(max_length=255, verbose_name="ตำแหน่ง/หน้าที่")
     badge_type = models.ForeignKey(
         'badges.BadgeType',
         on_delete=models.PROTECT,
         related_name='staff_profiles',
         verbose_name="ประเภทบัตร"
     )
+    zone = models.ForeignKey(
+        Zone,
+        on_delete=models.PROTECT,
+        related_name='staff_profiles',
+        blank=True,
+        null=True,
+        verbose_name="พื้นที่/โซน",
+        help_text="ระบุพื้นที่หรือโซนที่ปฏิบัติงาน"
+    )
+
+    # ข้อมูลส่วนตัว
+    age = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="อายุ"
+    )
+    vehicle_registration = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="ทะเบียนรถ"
+    )
+
+    # ข้อมูลติดต่อ
+    email = models.EmailField(blank=True, null=True, verbose_name="อีเมล")
+    phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="เบอร์โทรศัพท์")
+
+    # การรับวัคซีน
+    vaccine_dose_1 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๑")
+    vaccine_dose_2 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๒")
+    vaccine_dose_3 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๓")
+    vaccine_dose_4 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๔")
+
+    # การตรวจโควิดก่อนการปฏิบัติงาน
+    test_rt_pcr = models.BooleanField(default=False, verbose_name="RT-PCR")
+    test_atk = models.BooleanField(default=False, verbose_name="ATK")
+    test_temperature = models.BooleanField(default=False, verbose_name="วัดอุณหภูมิ")
+
+    # หมายเหตุและข้อมูลระบบ
     notes = models.TextField(blank=True, null=True, verbose_name="หมายเหตุ")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -62,7 +158,7 @@ class StaffProfile(models.Model):
     @property
     def full_name(self):
         """ชื่อเต็ม"""
-        return f"{self.get_title_display()}{self.first_name} {self.last_name}"
+        return f"{self.title}{self.first_name} {self.last_name}"
 
     @property
     def full_name_with_position(self):
@@ -82,11 +178,10 @@ class Photo(models.Model):
         upload_to='photos/original/',
         verbose_name="รูปภาพต้นฉบับ"
     )
-    cropped_photo = ProcessedImageField(
+    cropped_photo = models.ImageField(
         upload_to='photos/cropped/',
-        processors=[ResizeToFill(300, 400)],
-        format='JPEG',
-        options={'quality': 95},
+        blank=True,
+        null=True,
         verbose_name="รูปภาพที่ Crop แล้ว"
     )
     crop_data = models.JSONField(
@@ -190,7 +285,11 @@ class BadgeRequest(models.Model):
 
     def can_submit(self):
         """ตรวจสอบว่าสามารถส่งได้หรือไม่"""
-        return self.status in ['ready_to_submit', 'rejected'] and hasattr(self.staff_profile, 'photo')
+        # ถ้าต้องการรูป ต้องมีรูปก่อนส่งได้
+        if self.staff_profile.badge_type.requires_photo():
+            return self.status in ['ready_to_submit', 'rejected'] and hasattr(self.staff_profile, 'photo')
+        # ถ้าไม่ต้องการรูป (yellow/green) ส่งได้เลย
+        return self.status in ['ready_to_submit', 'rejected']
 
     def can_approve(self):
         """ตรวจสอบว่าสามารถอนุมัติได้หรือไม่"""

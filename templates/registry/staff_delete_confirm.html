@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}ยืนยันการลบบุคลากร{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบบุคลากร</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>คำเตือน:</strong> การลบข้อมูลนี้ไม่สามารถย้อนกลับได้!
+                    </div>
+
+                    <h5 class="mb-3">คุณต้องการลบข้อมูลบุคลากรต่อไปนี้หรือไม่?</h5>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>ชื่อ-นามสกุล:</strong></div>
+                                <div class="col-8">{{ staff_profile.full_name }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>ตำแหน่ง:</strong></div>
+                                <div class="col-8">{{ staff_profile.position }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>หน่วยงาน:</strong></div>
+                                <div class="col-8">{{ staff_profile.department.name }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4"><strong>ประเภทบัตร:</strong></div>
+                                <div class="col-8">
+                                    <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }};">
+                                        {{ staff_profile.badge_type.name }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        ข้อมูลที่จะถูกลบ: ข้อมูลบุคลากร, รูปภาพ, คำขอออกบัตร, และข้อมูลที่เกี่ยวข้องทั้งหมด
+                    </p>
+
+                    <form method="post" id="delete-form">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'registry:staff_list' %}" class="btn btn-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
+                                <i class="bi bi-trash"></i> ยืนยันการลบ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

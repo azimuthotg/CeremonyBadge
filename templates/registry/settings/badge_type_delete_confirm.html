@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}ยืนยันการลบประเภทบัตร{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบประเภทบัตร</h4>
+                </div>
+                <div class="card-body">
+                    {% if staff_count > 0 %}
+                    <!-- Cannot Delete -->
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <strong>ไม่สามารถลบประเภทบัตรนี้ได้!</strong>
+                    </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>ชื่อประเภทบัตร:</strong></div>
+                                <div class="col-7">{{ badge_type.name }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>สี:</strong></div>
+                                <div class="col-7">
+                                    <span class="badge" style="background-color: {{ badge_type.color_code }}; padding: 8px 16px;">
+                                        {{ badge_type.get_color_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-5"><strong>จำนวนบุคลากร:</strong></div>
+                                <div class="col-7"><span class="badge bg-danger">{{ staff_count }} คน</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        ประเภทบัตรนี้มีบุคลากรใช้งานอยู่ {{ staff_count }} คน กรุณาเปลี่ยนประเภทบัตรของบุคลากรเหล่านี้ก่อน หรือใช้ฟังก์ชัน "ปิดใช้งาน" แทนการลบ
+                    </p>
+
+                    <div class="d-grid">
+                        <a href="{% url 'registry:badge_type_list' %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-left"></i> กลับ
+                        </a>
+                    </div>
+
+                    {% else %}
+                    <!-- Can Delete -->
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>คำเตือน:</strong> การลบข้อมูลนี้ไม่สามารถย้อนกลับได้!
+                    </div>
+
+                    <h5 class="mb-3">คุณต้องการลบประเภทบัตรต่อไปนี้หรือไม่?</h5>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>ชื่อประเภทบัตร:</strong></div>
+                                <div class="col-7">{{ badge_type.name }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>สี:</strong></div>
+                                <div class="col-7">
+                                    <span class="badge" style="background-color: {{ badge_type.color_code }}; color: white; padding: 8px 16px;">
+                                        {{ badge_type.get_color_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>รหัสสี:</strong></div>
+                                <div class="col-7"><code>{{ badge_type.color_code }}</code></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>คำอธิบาย:</strong></div>
+                                <div class="col-7"><small>{{ badge_type.description|default:"-" }}</small></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-5"><strong>สถานะ:</strong></div>
+                                <div class="col-7">
+                                    {% if badge_type.is_active %}
+                                    <span class="badge bg-success">ใช้งาน</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">ปิดใช้งาน</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>ข้อมูลที่จะถูกลบ:</strong> ประเภทบัตร, แม่แบบบัตร (template), และข้อมูลที่เกี่ยวข้องทั้งหมด
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'registry:badge_type_list' %}" class="btn btn-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
+                                <i class="bi bi-trash"></i> ยืนยันการลบ
+                            </button>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if staff_count > 0 %}
+            <!-- Show alternative action -->
+            <div class="alert alert-info mt-3">
+                <strong><i class="bi bi-lightbulb"></i> แนะนำ:</strong>
+                <p class="mb-2">หากต้องการหยุดให้เลือกประเภทบัตรนี้ชั่วคราว คุณสามารถ:</p>
+                <ol class="mb-0">
+                    <li>กลับไปที่หน้ารายการประเภทบัตร</li>
+                    <li>กดปุ่ม "แก้ไข" บนประเภทบัตรนี้</li>
+                    <li>เลือก "ปิดใช้งาน"</li>
+                </ol>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

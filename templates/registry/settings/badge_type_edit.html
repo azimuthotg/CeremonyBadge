@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}แก้ไขประเภทบัตร - {{ badge_type.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'registry:badge_type_list' %}">จัดการประเภทบัตร</a></li>
+                    <li class="breadcrumb-item active">แก้ไข{{ badge_type.name }}</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-pencil"></i> แก้ไขประเภทบัตร: {{ badge_type.name }}</h2>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-palette"></i> ข้อมูลประเภทบัตร</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label class="form-label">ชื่อประเภทบัตร <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" value="{{ badge_type.name }}" required>
+                        </div>
+
+                        <!-- Color (Read-only) -->
+                        <div class="mb-3">
+                            <label class="form-label">สี (ไม่สามารถแก้ไข)</label>
+                            <input type="text" class="form-control" value="{{ badge_type.get_color_display }}" readonly disabled>
+                            <small class="text-muted">รหัสสีภายในระบบ: <code>{{ badge_type.color }}</code></small>
+                        </div>
+
+                        <!-- Color Code -->
+                        <div class="mb-3">
+                            <label class="form-label">รหัสสี (Hex) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="color" name="color_code" class="form-control form-control-color" value="{{ badge_type.color_code }}" required style="max-width: 80px;">
+                                <input type="text" name="color_code" class="form-control" value="{{ badge_type.color_code }}" pattern="^#[0-9A-Fa-f]{6}$" required id="colorHexInput">
+                            </div>
+                            <small class="text-muted">ตัวอย่าง: #FFC0CB</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label class="form-label">คำอธิบาย</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="เช่น บุคลากรชั้นในสุด - ผู้ที่ปฏิบัติงานใกล้ชิดพระองค์">{{ badge_type.description }}</textarea>
+                            <small class="text-muted">คำอธิบายจะแสดงในหน้ารายละเอียดบุคลากร</small>
+                        </div>
+
+                        <!-- Active Status -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="is_active" class="form-check-input" id="is_active" {% if badge_type.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">เปิดใช้งาน</label>
+                            </div>
+                            <small class="text-muted">ถ้าปิดใช้งาน จะไม่สามารถเลือกประเภทบัตรนี้เมื่อลงทะเบียนใหม่</small>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="mb-4">
+                            <label class="form-label">ตัวอย่าง</label>
+                            <div class="p-3 border rounded">
+                                <span class="badge" id="badgePreview" style="background-color: {{ badge_type.color_code }}; font-size: 1.1rem; padding: 10px 20px; color: white;">
+                                    {{ badge_type.name }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'registry:badge_type_list' %}" class="btn btn-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="bi bi-check-circle"></i> บันทึก
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="alert alert-warning mt-3">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>คำเตือน:</strong> การเปลี่ยนแปลงจะมีผลกับการแสดงผลของบัตรทั้งหมดที่ใช้ประเภทนี้
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sync color picker with hex input
+    document.addEventListener('DOMContentLoaded', function() {
+        const colorPicker = document.querySelector('input[type="color"]');
+        const hexInput = document.getElementById('colorHexInput');
+        const badgePreview = document.getElementById('badgePreview');
+
+        colorPicker.addEventListener('input', function() {
+            hexInput.value = this.value.toUpperCase();
+            badgePreview.style.backgroundColor = this.value;
+        });
+
+        hexInput.addEventListener('input', function() {
+            if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                colorPicker.value = this.value;
+                badgePreview.style.backgroundColor = this.value;
+            }
+        });
+    });
+</script>
+{% endblock %}

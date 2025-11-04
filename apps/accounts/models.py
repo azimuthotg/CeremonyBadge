@@ -8,6 +8,7 @@ class Department(models.Model):
     name = models.CharField(max_length=255, verbose_name="ชื่อหน่วยงาน")
     code = models.CharField(max_length=50, unique=True, verbose_name="รหัสหน่วยงาน")
     description = models.TextField(blank=True, null=True, verbose_name="รายละเอียด")
+    order = models.IntegerField(default=0, verbose_name="ลำดับการแสดงผล")
     is_active = models.BooleanField(default=True, verbose_name="ใช้งาน")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="สร้างเมื่อ")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="แก้ไขเมื่อ")
@@ -16,7 +17,7 @@ class Department(models.Model):
         db_table = 'departments'
         verbose_name = 'หน่วยงาน'
         verbose_name_plural = 'หน่วยงาน'
-        ordering = ['name']
+        ordering = ['order', 'name']
 
     def __str__(self):
         return self.name

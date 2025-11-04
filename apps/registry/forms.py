@@ -11,56 +11,145 @@ class StaffProfileForm(forms.ModelForm):
     class Meta:
         model = StaffProfile
         fields = [
-            'title', 'first_name', 'last_name',
-            'position', 'badge_type',
-            'phone', 'email', 'notes'
+            'department', 'title', 'first_name', 'last_name', 'national_id',
+            'position', 'badge_type', 'zone',
+            'age', 'vehicle_registration',
+            'phone', 'email',
+            'vaccine_dose_1', 'vaccine_dose_2', 'vaccine_dose_3', 'vaccine_dose_4',
+            'test_rt_pcr', 'test_atk', 'test_temperature',
+            'notes'
         ]
         widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'เช่น นาย, นาง, น.ส., พล.อ., พล.ต.'}),
             'first_name': forms.TextInput(attrs={'placeholder': 'ชื่อ'}),
             'last_name': forms.TextInput(attrs={'placeholder': 'นามสกุล'}),
-            'position': forms.TextInput(attrs={'placeholder': 'ตำแหน่ง'}),
+            'national_id': forms.TextInput(attrs={'placeholder': 'X-XXXX-XXXXX-XX-X', 'maxlength': '13'}),
+            'position': forms.TextInput(attrs={'placeholder': 'ตำแหน่ง/หน้าที่'}),
+            'age': forms.NumberInput(attrs={'placeholder': 'อายุ', 'min': '0'}),
+            'vehicle_registration': forms.TextInput(attrs={'placeholder': 'XX-XXXX กรุงเทพมหานคร'}),
             'phone': forms.TextInput(attrs={'placeholder': '0X-XXXX-XXXX'}),
             'email': forms.EmailInput(attrs={'placeholder': 'email@example.com'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'หมายเหตุ (ถ้ามี)'}),
         }
         labels = {
-            'title': 'คำนำหน้า',
+            'department': 'หน่วยงาน',
+            'title': 'ยศ',
             'first_name': 'ชื่อ',
             'last_name': 'นามสกุล',
-            'position': 'ตำแหน่ง',
+            'national_id': 'บัตรประชาชน ๑๓ หลัก',
+            'position': 'ตำแหน่ง/หน้าที่',
             'badge_type': 'ประเภทบัตร',
+            'zone': 'พื้นที่/โซน',
+            'age': 'อายุ',
+            'vehicle_registration': 'ทะเบียนรถ',
             'phone': 'เบอร์โทรศัพท์',
             'email': 'อีเมล',
+            'vaccine_dose_1': 'เข็ม ๑',
+            'vaccine_dose_2': 'เข็ม ๒',
+            'vaccine_dose_3': 'เข็ม ๓',
+            'vaccine_dose_4': 'เข็ม ๔',
+            'test_rt_pcr': 'RT-PCR',
+            'test_atk': 'ATK',
+            'test_temperature': 'วัดอุณหภูมิ',
             'notes': 'หมายเหตุ',
         }
 
     def __init__(self, *args, **kwargs):
+        # Get user role from kwargs if provided
+        user_role = kwargs.pop('user_role', None)
         super().__init__(*args, **kwargs)
+
+        # Hide department field for submitters (they use their own department)
+        if user_role == 'submitter':
+            self.fields['department'].widget = forms.HiddenInput()
+            self.fields['department'].required = False
+
+        # Customize zone field to show descriptions
+        from .models import Zone
+        self.fields['zone'].queryset = Zone.objects.filter(is_active=True)
+        self.fields['zone'].label_from_instance = lambda obj: f"{obj.code} - {obj.name}"
+
         self.helper = FormHelper()
         self.helper.form_method = 'post'
-        self.helper.layout = Layout(
-            HTML('<h5 class="mb-3"><i class="bi bi-person-badge"></i> ข้อมูลส่วนตัว</h5>'),
-            Row(
-                Column('title', css_class='col-md-3'),
-                Column('first_name', css_class='col-md-4'),
-                Column('last_name', css_class='col-md-5'),
-            ),
+
+        # Different layout for submitter vs officer/admin
+        if user_role == 'submitter':
+            layout_fields = [
+                HTML('<h5 class="mb-3"><i class="bi bi-person-badge"></i> ข้อมูลส่วนตัว</h5>'),
+                'department',  # Hidden field
+                Row(
+                    Column('title', css_class='col-md-2'),
+                    Column('first_name', css_class='col-md-4'),
+                    Column('last_name', css_class='col-md-6'),
+                ),
+                'national_id',
+            ]
+        else:
+            layout_fields = [
+                HTML('<h5 class="mb-3"><i class="bi bi-building"></i> หน่วยงาน</h5>'),
+                'department',
+                HTML('<h5 class="mb-3 mt-4"><i class="bi bi-person-badge"></i> ข้อมูลส่วนตัว</h5>'),
+                Row(
+                    Column('title', css_class='col-md-2'),
+                    Column('first_name', css_class='col-md-4'),
+                    Column('last_name', css_class='col-md-6'),
+                ),
+                'national_id',
+            ]
+
+        layout_fields.extend([
             HTML('<h5 class="mb-3 mt-4"><i class="bi bi-briefcase"></i> ข้อมูลการทำงาน</h5>'),
             Row(
                 Column('position', css_class='col-md-6'),
                 Column('badge_type', css_class='col-md-6'),
+            ),
+            'zone',
+            HTML('<h5 class="mb-3 mt-4"><i class="bi bi-person-circle"></i> ข้อมูลเพิ่มเติม</h5>'),
+            Row(
+                Column('age', css_class='col-md-6'),
+                Column('vehicle_registration', css_class='col-md-6'),
             ),
             HTML('<h5 class="mb-3 mt-4"><i class="bi bi-telephone"></i> ข้อมูลติดต่อ</h5>'),
             Row(
                 Column('phone', css_class='col-md-6'),
                 Column('email', css_class='col-md-6'),
             ),
+            HTML('<h5 class="mb-3 mt-4"><i class="bi bi-shield-check"></i> การรับวัคซีน</h5>'),
+            Row(
+                Column('vaccine_dose_1', css_class='col-md-3'),
+                Column('vaccine_dose_2', css_class='col-md-3'),
+                Column('vaccine_dose_3', css_class='col-md-3'),
+                Column('vaccine_dose_4', css_class='col-md-3'),
+            ),
+            HTML('<h5 class="mb-3 mt-4"><i class="bi bi-clipboard-pulse"></i> การตรวจโควิดก่อนการปฏิบัติงาน</h5>'),
+            Row(
+                Column('test_rt_pcr', css_class='col-md-4'),
+                Column('test_atk', css_class='col-md-4'),
+                Column('test_temperature', css_class='col-md-4'),
+            ),
+            HTML('<h5 class="mb-3 mt-4"><i class="bi bi-chat-left-text"></i> หมายเหตุ</h5>'),
             'notes',
             Div(
                 HTML('<button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-arrow-right-circle"></i> ต่อไป: อัปโหลดรูปถ่าย</button>'),
                 css_class='mt-4 d-grid'
             )
-        )
+        ])
+
+        self.helper.layout = Layout(*layout_fields)
+
+    def clean_national_id(self):
+        """ตรวจสอบเลขบัตรประชาชน"""
+        national_id = self.cleaned_data.get('national_id')
+        if national_id:
+            # Remove all non-digit characters
+            national_id = ''.join(filter(str.isdigit, national_id))
+
+            # Check length
+            if len(national_id) != 13:
+                raise forms.ValidationError('เลขบัตรประชาชนต้องมี 13 หลัก')
+
+            return national_id
+        return national_id
 
 
 class PhotoUploadForm(forms.ModelForm):

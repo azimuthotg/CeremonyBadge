@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}จัดการผู้ใช้{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-people-fill text-primary-custom"></i> จัดการผู้ใช้</h2>
+        <p class="text-muted">จัดการบัญชีผู้ใช้ในระบบ</p>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'accounts:user_add' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> เพิ่มผู้ใช้ใหม่
+        </a>
+    </div>
+</div>
+
+<!-- สถิติ -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-people fs-1 text-primary-custom"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h3 class="mb-0">{{ total_users }}</h3>
+                        <p class="text-muted mb-0">ผู้ใช้ทั้งหมด</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-person-check fs-1 text-success"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h3 class="mb-0">{{ active_users }}</h3>
+                        <p class="text-muted mb-0">ผู้ใช้ที่เปิดใช้งาน</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ค้นหาและกรอง -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">ค้นหา</label>
+                <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="ชื่อผู้ใช้, ชื่อ, นามสกุล, อีเมล">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">บทบาท</label>
+                <select name="role" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>ผู้ดูแลระบบ</option>
+                    <option value="officer" {% if role_filter == 'officer' %}selected{% endif %}>เจ้าหน้าที่</option>
+                    <option value="submitter" {% if role_filter == 'submitter' %}selected{% endif %}>ผู้ส่งข้อมูล</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">หน่วยงาน</label>
+                <select name="department" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {% if dept_filter == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> ค้นหา
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ตารางผู้ใช้ -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ชื่อผู้ใช้</th>
+                        <th>ชื่อ-นามสกุล</th>
+                        <th>อีเมล</th>
+                        <th>บทบาท</th>
+                        <th>หน่วยงาน</th>
+                        <th>สถานะ</th>
+                        <th>วันที่สมัคร</th>
+                        <th class="text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user_obj in users %}
+                    <tr>
+                        <td>
+                            <strong>{{ user_obj.username }}</strong>
+                            {% if user_obj.is_superuser %}
+                            <span class="badge bg-danger ms-1">Superuser</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user_obj.get_full_name|default:"-" }}</td>
+                        <td>{{ user_obj.email|default:"-" }}</td>
+                        <td>
+                            {% if user_obj.role == 'admin' %}
+                            <span class="badge bg-danger">{{ user_obj.get_role_display }}</span>
+                            {% elif user_obj.role == 'officer' %}
+                            <span class="badge bg-warning text-dark">{{ user_obj.get_role_display }}</span>
+                            {% else %}
+                            <span class="badge bg-info">{{ user_obj.get_role_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user_obj.department.name|default:"-" }}</td>
+                        <td>
+                            {% if user_obj.is_active %}
+                            <span class="badge bg-success">เปิดใช้งาน</span>
+                            {% else %}
+                            <span class="badge bg-secondary">ปิดใช้งาน</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user_obj.date_joined|date:"d/m/Y" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'accounts:user_edit' user_obj.id %}" class="btn btn-sm btn-outline-primary" title="แก้ไข">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% if user_obj != user %}
+                            <a href="{% url 'accounts:user_delete' user_obj.id %}" class="btn btn-sm btn-outline-danger" title="ลบ">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            ไม่พบข้อมูลผู้ใช้
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

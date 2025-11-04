@@ -1,7 +1,28 @@
 from django.contrib import admin
-from .models import StaffProfile, Photo, BadgeRequest
+from .models import StaffProfile, Photo, BadgeRequest, Zone
 
 # Register your models here.
+
+@admin.register(Zone)
+class ZoneAdmin(admin.ModelAdmin):
+    list_display = ['code', 'name', 'work_start_date', 'work_end_date', 'order', 'is_active', 'created_at']
+    list_filter = ['is_active', 'work_start_date', 'work_end_date']
+    search_fields = ['code', 'name', 'description']
+    ordering = ['order', 'code']
+    list_editable = ['order', 'is_active']
+
+    fieldsets = (
+        ('ข้อมูลโซน', {
+            'fields': ('code', 'name', 'description')
+        }),
+        ('ระยะเวลาการปฏิบัติงาน', {
+            'fields': ('work_start_date', 'work_end_date')
+        }),
+        ('การแสดงผล', {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    readonly_fields = ['created_at', 'updated_at']
 
 @admin.register(StaffProfile)
 class StaffProfileAdmin(admin.ModelAdmin):

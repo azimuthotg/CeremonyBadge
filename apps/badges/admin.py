@@ -5,11 +5,22 @@ from .models import BadgeType, BadgeTemplate, Badge, PrintLog
 
 @admin.register(BadgeType)
 class BadgeTypeAdmin(admin.ModelAdmin):
-    list_display = ['name', 'color', 'color_code', 'is_active', 'created_at']
+    list_display = ['name', 'color', 'color_code', 'description', 'is_active', 'created_at']
     list_filter = ['color', 'is_active', 'created_at']
     search_fields = ['name', 'description']
     ordering = ['name']
     date_hierarchy = 'created_at'
+    list_editable = ['is_active']
+
+    fieldsets = (
+        ('ข้อมูลประเภทบัตร', {
+            'fields': ('name', 'color', 'color_code', 'description')
+        }),
+        ('การแสดงผล', {
+            'fields': ('is_active',)
+        }),
+    )
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(BadgeTemplate)

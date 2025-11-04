@@ -150,10 +150,263 @@ ceremony_badge/
 ```
 
 git https://github.com/azimuthotg/CeremonyBadge.git
+
+---
+
+## 📊 สถานะการพัฒนา (Development Status)
+
+### ✅ Phase 1: พื้นฐานระบบ (เสร็จ 100%)
+- ✅ Database Schema & Models ครบทั้ง 6 apps
+- ✅ Django Admin Interface พร้อมใช้งาน
+- ✅ Authentication & Authorization System
+- ✅ User Roles & Permissions (Submitter, Officer, Admin)
+- ✅ Initial Data Script (Departments, Badge Types, Settings)
+
+### ✅ Phase 2: UI/UX Framework (เสร็จ 100%)
+- ✅ Base Template with Sidebar Navigation
+- ✅ Responsive Design (Bootstrap 5)
+- ✅ Purple Pastel Theme Styling
+- ✅ Dashboard Layout (แยกตาม Role)
+
+### 🔄 Phase 3: Submitter Workflow (เสร็จ 90%)
+- ✅ 3-Step Registration Wizard
+  - ✅ Step 1: กรอกข้อมูลบุคลากร (StaffProfileForm)
+  - ✅ Step 2: อัปโหลดรูปภาพ (PhotoUploadForm)
+  - ⚠️ **Cropper.js ยังไม่ได้ integrate** - รูปยังครอปไม่ได้จริง
+  - ✅ Step 3: ตรวจสอบข้อมูล + ส่งคำขอ
+- ✅ รายการบุคลากร (พร้อม Search)
+- ✅ รายละเอียดบุคลากร
+
+### ❌ Phase 4: Approval System (ยังไม่เริ่ม 0%)
+- ❌ หน้ารายการรอตรวจสอบ (Pending Review)
+- ❌ ระบบอนุมัติ/ส่งกลับ (Approve/Reject)
+- ❌ แสดง ApprovalLog History
+- ❌ Notification System
+
+### ❌ Phase 5: Badge Generation & Printing (ยังไม่เริ่ม 0%)
+- ❌ สร้างบัตร + QR Code (Auto generation)
+- ❌ จัดการ Badge Templates
+- ❌ Preview บัตร
+- ❌ Export บัตรเป็น PDF/Image
+- ❌ ระบบพิมพ์บัตร + Print Logs
+
+### ❌ Phase 6: Reports & Analytics (ยังไม่เริ่ม 0%)
+- ❌ Dashboard with Charts (Chart.js)
+- ❌ รายงานตามหน่วยงาน/ประเภทบัตร
+- ❌ Export ข้อมูล (Excel, PDF)
+- ❌ สรุปสถิติการออกบัตร
+
+### ❌ Phase 7: System Settings (ยังไม่เริ่ม 0%)
+- ⚠️ Model มีแล้ว แต่ไม่มี UI
+- ❌ หน้าจัดการ System Settings (Admin only)
+- ❌ จัดการ QR Secret Key
+- ❌ ปรับแต่ง Theme Colors
+- ❌ Backup/Restore Settings
+
+---
+
+## 🎯 Roadmap ต่อไป (Next Steps)
+
+### 🔴 สำคัญที่สุด (Critical)
+1. **Cropper.js Integration** - ต้องทำก่อน! ไม่งั้นครอปรูปไม่ได้
+2. **Approval System** - Officer/Admin ต้องอนุมัติคำขอได้
+3. **Badge Generation** - สร้างบัตร + QR code หลังอนุมัติ
+
+### 🟡 สำคัญ (High Priority)
+4. **Badge Printing** - Export PDF สำหรับพิมพ์
+5. **Approval History** - ดูประวัติการอนุมัติ
+6. **Basic Reports** - รายงานสรุปพื้นฐาน
+
+### 🟢 ควรมี (Medium Priority)
+7. **Dashboard Charts** - Chart.js สำหรับแสดงกราฟ
+8. **System Settings UI** - หน้าจัดการการตั้งค่า
+9. **Export Functions** - Export Excel/PDF
+10. **Email Notifications** - แจ้งเตือนเมื่ออนุมัติ/ปฏิเสธ
+
+---
+
+## 🗂️ โครงสร้างไฟล์สำคัญ
+
+```
+CeremonyBadge/
+├── ceremony_badge/           # Project Settings
+│   ├── settings.py          # ⚠️ มี DB credentials hardcoded
+│   ├── urls.py              # Main URL routing
+│   └── wsgi.py
+│
+├── apps/
+│   ├── accounts/            # ✅ เสร็จ - Users & Departments
+│   │   ├── models.py       # User (custom), Department
+│   │   ├── views.py        # login, logout, dashboard
+│   │   └── admin.py        # Django admin
+│   │
+│   ├── registry/            # ✅ 90% - Staff Registration
+│   │   ├── models.py       # StaffProfile, Photo, BadgeRequest
+│   │   ├── views.py        # ✅ 3-step wizard, staff_list
+│   │   ├── forms.py        # ✅ StaffProfileForm, PhotoUploadForm
+│   │   ├── urls.py         # ✅ Registry routes
+│   │   └── admin.py        # ✅ Django admin
+│   │
+│   ├── badges/              # ❌ 0% - Badge Management
+│   │   ├── models.py       # ✅ BadgeType, Badge, PrintLog
+│   │   ├── views.py        # ❌ ยังว่างเปล่า
+│   │   ├── forms.py        # ❌ ยังไม่มี
+│   │   └── urls.py         # ❌ ยังไม่มี
+│   │
+│   ├── approvals/           # ❌ 0% - Approval System
+│   │   ├── models.py       # ✅ ApprovalLog
+│   │   ├── views.py        # ❌ ยังว่างเปล่า
+│   │   └── admin.py        # ✅ Django admin
+│   │
+│   ├── reports/             # ❌ 0% - Reports & Analytics
+│   │   └── ...             # ยังไม่มีอะไร
+│   │
+│   └── settings_app/        # ⚠️ 50% - System Settings
+│       ├── models.py       # ✅ SystemSetting model
+│       └── views.py        # ❌ ยังไม่มี UI
+│
+├── templates/
+│   ├── base.html           # ✅ Sidebar Layout (เพิ่งอัพเดท)
+│   ├── login.html          # ✅ Login page
+│   ├── dashboard/          # ✅ Dashboard templates
+│   └── registry/           # ✅ 3-step wizard templates
+│
+├── static/
+│   └── css/
+│       └── custom.css      # ✅ Purple Pastel Theme + Sidebar CSS
+│
+├── create_initial_data.py  # ✅ สคริปต์สร้างข้อมูลเริ่มต้น
+├── manage.py               # Django management
+├── requirements.txt        # Python dependencies
+│
+├── CLAUDE.md              # 🤖 คู่มือสำหรับ Claude Code
+├── DEPLOYMENT_WINDOWS.md  # 📘 คู่มือ Deploy บน Windows
+├── GIT_INFO.md            # Git configuration info
+└── SETUP_STATUS.md        # Setup checklist
+```
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. เตรียม Environment
+```bash
+# เปิดใช้งาน virtual environment
+source Ceremony_env/bin/activate  # Linux/Mac
+# หรือ
+Ceremony_env\Scripts\activate     # Windows
+
+# ติดตั้ง dependencies
+pip install -r requirements.txt
+```
+
+### 2. ตั้งค่า Database
+```bash
+# รัน migrations
+python manage.py migrate
+
+# สร้างข้อมูลเริ่มต้น (หน่วยงาน, บัตร 4 สี, settings)
+python create_initial_data.py
+
+# สร้าง superuser (ถ้ายังไม่มี)
+python manage.py createsuperuser
+```
+
+### 3. รันเซิร์ฟเวอร์
+```bash
+# Development
+python manage.py runserver 0.0.0.0:8000
+
+# เข้าใช้งาน: http://localhost:8000
+# Django Admin: http://localhost:8000/admin
+```
+
+---
+
+## 👤 User Accounts ในระบบ
+
+### User ที่มีอยู่
+- **Username:** `admin_e`
+- **Role:** Submitter (อาจต้องเปลี่ยนเป็น Admin/Officer)
+- **Department:** มหาวิทยาลัยนครพนม
+
+### เปลี่ยน Role ของ User
+```bash
+python manage.py shell
+>>> from apps.accounts.models import User
+>>> user = User.objects.get(username='admin_e')
+>>> user.role = 'admin'  # หรือ 'officer', 'submitter'
+>>> user.is_staff = True
+>>> user.is_superuser = True  # ถ้าเป็น admin
+>>> user.save()
+```
+
+---
+
+## 🎨 ธีมและสีสัน (Theme Colors)
+
+### สีหลัก (Primary Colors)
+- **Primary:** `#A78BFA` (ม่วงพาสเทล)
+- **Primary Dark:** `#7C3AED`
+- **Primary Light:** `#C4B5FD`
+
+### สีประเภทบัตร (Badge Colors)
+- **บัตรชมพู:** `#FFC0CB` - บุคลากรชั้นในสุด
+- **บัตรแดง:** `#FF6B6B` - บุคลากรชั้นใน
+- **บัตรเหลือง:** `#FFD93D` - บุคลากรชั้นกลาง
+- **บัตรเขียว:** `#6BCB77` - บุคลากรชั้นนอก
+
+---
+
+## 📱 หน้าที่ใช้งานได้ (Available Pages)
+
+### ✅ ใช้งานได้
+- `/` - Login Page
+- `/dashboard/` - Dashboard (แยกตาม Role)
+- `/registry/staff/` - รายการบุคลากร (พร้อม Search)
+- `/registry/wizard/step1/` - ลงทะเบียนใหม่ Step 1
+- `/registry/wizard/step2/<id>/` - อัปโหลดรูปภาพ Step 2
+- `/registry/wizard/step3/<id>/` - ตรวจสอบข้อมูล Step 3
+- `/registry/staff/<id>/` - รายละเอียดบุคลากร
+- `/admin/` - Django Admin Panel
+
+### ❌ ยังไม่มี (Coming Soon)
+- Approval/Review System
+- Badge Generation & Printing
+- Reports & Analytics
+- System Settings UI
+
+---
+
+## 🐛 Known Issues
+
+### ⚠️ ปัญหาที่ต้องแก้
+1. **Cropper.js ยังไม่ได้ integrate** - Step 2 ยังครอปรูปไม่ได้จริง
+2. **Database credentials hardcoded** - ควรใช้ .env file (มี python-decouple ใน requirements แล้ว)
+3. **BadgeRequest.submitted_by field** - ใน views.py บรรทัด 203 แต่ไม่มีใน model
+
+### 🔧 To-Do ด้านเทคนิค
+- [ ] Integrate Cropper.js ใน wizard_step2.html
+- [ ] ใช้ python-decouple สำหรับ environment variables
+- [ ] แก้ไข BadgeRequest model (submitted_by field)
+- [ ] เพิ่ม collectstatic command ใน deployment
+- [ ] ตั้งค่า ALLOWED_HOSTS สำหรับ production
+
+---
+
+## 📚 เอกสารเพิ่มเติม (Additional Documentation)
+
+- **CLAUDE.md** - คู่มือสำหรับ Claude Code (AI Assistant)
+- **DEPLOYMENT_WINDOWS.md** - คู่มือติดตั้งและ Deploy บน Windows Server
+- **GIT_INFO.md** - ข้อมูล Git configuration
+- **SETUP_STATUS.md** - Setup checklist และสถานะการติดตั้ง
+
 ---
 
 ### ✨ ผู้พัฒนา
-**สำนักวิทยบริการและเทคโนโลยีสารสนเทศ  
-มหาวิทยาลัยนครพนม (NPU)**  
-โครงการพัฒนาระบบออกบัตรผู้ปฏิบัติงานพิธีพระราชทานปริญญาบัตร 2567  
+**สำนักวิทยบริการและเทคโนโลยีสารสนเทศ
+มหาวิทยาลัยนครพนม (NPU)**
+โครงการพัฒนาระบบออกบัตรผู้ปฏิบัติงานพิธีพระราชทานปริญญาบัตร 2567
 พัฒนาโดย Django Framework
+
+**Last Updated:** 2025-11-03

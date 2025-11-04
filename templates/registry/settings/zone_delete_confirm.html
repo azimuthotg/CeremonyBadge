@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}ยืนยันการลบโซน{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบโซนปฏิบัติงาน</h4>
+                </div>
+                <div class="card-body">
+                    {% if staff_count > 0 %}
+                    <!-- Cannot Delete -->
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <strong>ไม่สามารถลบโซนนี้ได้!</strong>
+                    </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>รหัสโซน:</strong></div>
+                                <div class="col-8">{{ zone.code }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>ชื่อโซน:</strong></div>
+                                <div class="col-8">{{ zone.name }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4"><strong>จำนวนบุคลากร:</strong></div>
+                                <div class="col-8"><span class="badge bg-danger">{{ staff_count }} คน</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        โซนนี้มีบุคลากรใช้งานอยู่ {{ staff_count }} คน กรุณาเปลี่ยนโซนของบุคลากรเหล่านี้ก่อน หรือใช้ฟังก์ชัน "ปิดใช้งาน" แทนการลบ
+                    </p>
+
+                    <div class="d-grid">
+                        <a href="{% url 'registry:zone_list' %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-left"></i> กลับ
+                        </a>
+                    </div>
+
+                    {% else %}
+                    <!-- Can Delete -->
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>คำเตือน:</strong> การลบข้อมูลนี้ไม่สามารถย้อนกลับได้!
+                    </div>
+
+                    <h5 class="mb-3">คุณต้องการลบโซนต่อไปนี้หรือไม่?</h5>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>รหัสโซน:</strong></div>
+                                <div class="col-8">{{ zone.code }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>ชื่อโซน:</strong></div>
+                                <div class="col-8">{{ zone.name }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>คำอธิบาย:</strong></div>
+                                <div class="col-8">{{ zone.description|default:"-" }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4"><strong>สถานะ:</strong></div>
+                                <div class="col-8">
+                                    {% if zone.is_active %}
+                                    <span class="badge bg-success">ใช้งาน</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">ปิดใช้งาน</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'registry:zone_list' %}" class="btn btn-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
+                                <i class="bi bi-trash"></i> ยืนยันการลบ
+                            </button>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

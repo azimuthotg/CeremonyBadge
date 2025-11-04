@@ -11,6 +11,8 @@ django.setup()
 
 from apps.accounts.models import Department, User
 from apps.badges.models import BadgeType, BadgeTemplate
+from apps.registry.models import Zone
+from datetime import date
 
 def create_departments():
     """สร้างหน่วยงานเริ่มต้น"""
@@ -113,6 +115,54 @@ def create_badge_templates(badge_types):
             print(f"→ แม่แบบบัตรมีอยู่แล้ว: {bt.name}")
 
 
+def create_zones():
+    """สร้างโซนปฏิบัติงาน"""
+    print("\n" + "="*50)
+    print("สร้างโซนปฏิบัติงาน...")
+    print("="*50)
+
+    zones_data = [
+        {
+            'code': 'A',
+            'name': 'กอร.ถปภ. ณ มหาวิทยาลัยนครพนม',
+            'description': 'พื้นที่ภายในมหาวิทยาลัยนครพนม - โซน A',
+            'work_start_date': date(2025, 12, 1),
+            'work_end_date': date(2025, 12, 15),
+            'order': 1,
+            'is_active': True
+        },
+        {
+            'code': 'B',
+            'name': 'กอร.ถปภ. ณ ท่าอากาศยานนครพนม',
+            'description': 'พื้นที่ท่าอากาศยานนครพนม - โซน B',
+            'work_start_date': date(2025, 12, 1),
+            'work_end_date': date(2025, 12, 15),
+            'order': 2,
+            'is_active': True
+        },
+        {
+            'code': 'C',
+            'name': 'กอร.ถปภ. ณ จุดตรวจ',
+            'description': 'พื้นที่จุดตรวจต่างๆ - โซน C',
+            'work_start_date': date(2025, 12, 1),
+            'work_end_date': date(2025, 12, 15),
+            'order': 3,
+            'is_active': True
+        },
+    ]
+
+    for zone_data in zones_data:
+        zone, created = Zone.objects.get_or_create(
+            code=zone_data['code'],
+            defaults=zone_data
+        )
+
+        if created:
+            print(f"✓ สร้างโซนใหม่: {zone.code} - {zone.name}")
+        else:
+            print(f"→ โซนมีอยู่แล้ว: {zone.code} - {zone.name}")
+
+
 def create_system_settings():
     """สร้างการตั้งค่าระบบเริ่มต้น"""
     print("\n" + "="*50)
@@ -182,7 +232,10 @@ def main():
         # 3. สร้างแม่แบบบัตร
         create_badge_templates(badge_types)
 
-        # 4. สร้างการตั้งค่าระบบ
+        # 4. สร้างโซนปฏิบัติงาน
+        create_zones()
+
+        # 5. สร้างการตั้งค่าระบบ
         create_system_settings()
 
         print("\n" + "="*50)
@@ -192,6 +245,7 @@ def main():
         print(f"  - หน่วยงาน: {Department.objects.count()} รายการ")
         print(f"  - ประเภทบัตร: {BadgeType.objects.count()} ประเภท")
         print(f"  - แม่แบบบัตร: {BadgeTemplate.objects.count()} แม่แบบ")
+        print(f"  - โซนปฏิบัติงาน: {Zone.objects.count()} โซน")
         print(f"  - การตั้งค่าระบบ: {SystemSetting.objects.count()} รายการ")
         print("\nขั้นตอนต่อไป:")
         print("  1. สร้าง superuser: python manage.py createsuperuser")

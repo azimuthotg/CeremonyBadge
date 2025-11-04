@@ -46,7 +46,7 @@
                             </p>
                         </div>
                         <div class="col-md-4 text-end">
-                            <a href="{% url 'registry:wizard_step1' staff_profile.id %}" class="btn btn-sm btn-outline-primary">
+                            <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> แก้ไขข้อมูล
                             </a>
                         </div>
@@ -108,7 +108,7 @@
 
                         <!-- Buttons -->
                         <div class="mt-4 d-flex gap-2">
-                            <a href="{% url 'registry:wizard_step1' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
+                            <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-arrow-left-circle"></i> ย้อนกลับ
                             </a>
                             <button type="submit" id="btn-submit" class="btn btn-primary btn-lg flex-grow-1">
