@@ -123,17 +123,19 @@
                     <h6 class="sidebar-heading">
                         <i class="bi bi-card-checklist"></i> ตรวจสอบและอนุมัติ
                     </h6>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'approvals/pending' in request.path %}active{% endif %}" href="{% url 'approvals:pending_list' %}">
                         <i class="bi bi-hourglass-split"></i> รอตรวจสอบ
-                        <span class="badge bg-warning text-dark ms-auto">0</span>
+                        {% if pending_count > 0 %}
+                        <span class="badge bg-warning text-dark ms-auto">{{ pending_count }}</span>
+                        {% endif %}
                     </a>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'approvals/approved' in request.path %}active{% endif %}" href="{% url 'approvals:approved_list' %}">
                         <i class="bi bi-check-circle"></i> อนุมัติแล้ว
                     </a>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'approvals/rejected' in request.path %}active{% endif %}" href="{% url 'approvals:rejected_list' %}">
                         <i class="bi bi-x-circle"></i> ส่งกลับแก้ไข
                     </a>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'approvals/history' in request.path %}active{% endif %}" href="{% url 'approvals:history' %}">
                         <i class="bi bi-clock-history"></i> ประวัติการอนุมัติ
                     </a>
                 </div>
@@ -142,17 +144,11 @@
                     <h6 class="sidebar-heading">
                         <i class="bi bi-award"></i> จัดการบัตร
                     </h6>
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-file-plus"></i> สร้างบัตรใหม่
-                    </a>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'badges/list' in request.path %}active{% endif %}" href="{% url 'badges:badge_list' %}">
                         <i class="bi bi-card-list"></i> รายการบัตร
                     </a>
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-palette"></i> จัดการเทมเพลต
-                    </a>
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-printer"></i> พิมพ์บัตร
+                    <a class="nav-link {% if 'approvals/approved' in request.path %}active{% endif %}" href="{% url 'approvals:approved_list' %}">
+                        <i class="bi bi-file-plus"></i> สร้างบัตรจากรายการอนุมัติ
                     </a>
                 </div>
 
@@ -189,16 +185,22 @@
                     </a>
 
                     <!-- Settings Submenu -->
-                    <div class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#settingsSubmenu" aria-expanded="{% if 'settings' in request.path or 'badge-types' in request.path or 'zones' in request.path %}true{% else %}false{% endif %}" style="cursor: pointer;">
+                    <div class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#settingsSubmenu" aria-expanded="{% if 'settings' in request.path or 'badge-types' in request.path or 'zones' in request.path or 'work-dates' in request.path %}true{% else %}false{% endif %}" style="cursor: pointer;">
                         <span><i class="bi bi-gear-fill"></i> ตั้งค่าระบบ</span>
                         <i class="bi bi-chevron-down"></i>
                     </div>
-                    <div class="collapse {% if 'settings' in request.path or 'badge-types' in request.path or 'zones' in request.path %}show{% endif %}" id="settingsSubmenu">
+                    <div class="collapse {% if 'settings' in request.path or 'badge-types' in request.path or 'zones' in request.path or 'work-dates' in request.path or 'signatories' in request.path %}show{% endif %}" id="settingsSubmenu">
                         <a class="nav-link ps-5 {% if 'badge-types' in request.path %}active{% endif %}" href="{% url 'registry:badge_type_list' %}">
                             <i class="bi bi-palette"></i> ประเภทบัตร
                         </a>
                         <a class="nav-link ps-5 {% if 'zones' in request.path %}active{% endif %}" href="{% url 'registry:zone_list' %}">
                             <i class="bi bi-geo-alt"></i> โซนปฏิบัติงาน
+                        </a>
+                        <a class="nav-link ps-5 {% if 'work-dates' in request.path %}active{% endif %}" href="{% url 'registry:work_dates_settings' %}">
+                            <i class="bi bi-calendar-range"></i> วันปฏิบัติงาน
+                        </a>
+                        <a class="nav-link ps-5 {% if 'signatories' in request.path %}active{% endif %}" href="{% url 'badges:signatory_list' %}">
+                            <i class="bi bi-pen"></i> ผู้เซ็นบัตร
                         </a>
                     </div>
 
@@ -236,14 +238,14 @@
             <footer class="footer">
                 <div class="container-fluid px-4">
                     <div class="row">
-                        <div class="col-md-6 text-center text-md-start">
+                        <div class="col-md-8 text-center text-md-start">
                             <small class="text-muted">
-                                <i class="bi bi-building"></i> สำนักวิทยบริการและเทคโนโลยีสารสนเทศ มหาวิทยาลัยนครพนม
+                                <i class="bi bi-building"></i> แผนกสื่อสารองค์กรและวิเทศน์สัมพันธ์ ร่วมกับ แผนกเทคโนโลยีดิจิทัล มหาวิทยาลัยนครพนม
                             </small>
                         </div>
-                        <div class="col-md-6 text-center text-md-end">
+                        <div class="col-md-4 text-center text-md-end">
                             <small class="text-muted">
-                                <i class="bi bi-c-circle"></i> 2567 | Django Framework
+                                <i class="bi bi-person-badge"></i> ผู้พัฒนา: นายสุรนารถ สุพรรณ นักวิชาการคอมพิวเตอร์
                             </small>
                         </div>
                     </div>

@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+
+{% block title %}ตรวจสอบรายละเอียด{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-clipboard-check"></i> ตรวจสอบรายละเอียด</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'approvals:pending_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> ย้อนกลับ
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Photo and Actions -->
+        <div class="col-md-4">
+            <!-- Photo Card -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    {% if photo.cropped_photo %}
+                        <img src="{{ photo.cropped_photo.url }}" alt="Photo" class="img-fluid rounded mb-3" style="max-width: 100%;">
+                    {% elif photo.original_photo %}
+                        <img src="{{ photo.original_photo.url }}" alt="Photo" class="img-fluid rounded mb-3" style="max-width: 100%;">
+                    {% else %}
+                        <div class="py-5 bg-light rounded mb-3">
+                            <i class="bi bi-person-circle" style="font-size: 6rem; color: #ccc;"></i>
+                        </div>
+                    {% endif %}
+
+                    <h4>{{ staff_profile.full_name }}</h4>
+                    <p class="text-muted">{{ staff_profile.position }}</p>
+
+                    <div class="mb-3">
+                        <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }}; font-size: 1rem; padding: 8px 16px;">
+                            {{ staff_profile.badge_type.name }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="badge-status {{ badge_request.status }}" style="font-size: 0.9rem;">
+                            {{ badge_request.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            {% if badge_request.status in 'submitted,under_review' %}
+            <div class="card">
+                <div class="card-header bg-light">
+                    <strong><i class="bi bi-lightning-charge-fill"></i> การดำเนินการ</strong>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveModal">
+                            <i class="bi bi-check-circle"></i> อนุมัติ
+                        </button>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                            <i class="bi bi-x-circle"></i> ส่งกลับแก้ไข
+                        </button>
+                        <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> แก้ไขข้อมูล
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Details -->
+        <div class="col-md-8">
+            <!-- Main Information Card -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="bi bi-person-vcard"></i> ข้อมูลบุคลากร</strong>
+                </div>
+                <div class="card-body">
+                    <!-- Personal Info -->
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">ยศ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.title|default:"-" }}</div>
+                        <div class="col-md-2"><small class="text-muted">ชื่อ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.first_name }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">นามสกุล:</small></div>
+                        <div class="col-md-4">{{ staff_profile.last_name }}</div>
+                        <div class="col-md-2"><small class="text-muted">บัตรประชาชน:</small></div>
+                        <div class="col-md-4">{{ staff_profile.national_id|default:"-" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-2"><small class="text-muted">อายุ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.age|default:"-" }} ปี</div>
+                        <div class="col-md-2"><small class="text-muted">ทะเบียนรถ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.vehicle_registration|default:"-" }}</div>
+                    </div>
+                    <hr>
+                    <!-- Work Info -->
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">หน่วยงาน:</small></div>
+                        <div class="col-md-4">{{ staff_profile.department.name }}</div>
+                        <div class="col-md-2"><small class="text-muted">หน้าที่:</small></div>
+                        <div class="col-md-4">{{ staff_profile.position }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">ประเภทบัตร:</small></div>
+                        <div class="col-md-4">
+                            <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }};">
+                                {{ staff_profile.badge_type.name }}
+                            </span>
+                        </div>
+                        <div class="col-md-2"><small class="text-muted">คำอธิบาย:</small></div>
+                        <div class="col-md-4">
+                            {{ staff_profile.badge_type.description|default:"-" }}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">โซน:</small></div>
+                        <div class="col-md-4">
+                            {% if staff_profile.zone %}
+                                {{ staff_profile.zone.code }} - {{ staff_profile.zone.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2"><small class="text-muted">คำอธิบาย:</small></div>
+                        <div class="col-md-4">
+                            {% if staff_profile.zone and staff_profile.zone.description %}
+                                {{ staff_profile.zone.description }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <!-- Contact Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-2"><small class="text-muted">เบอร์โทร:</small></div>
+                        <div class="col-md-4">{{ staff_profile.phone|default:"-" }}</div>
+                        <div class="col-md-2"><small class="text-muted">อีเมล:</small></div>
+                        <div class="col-md-4">{{ staff_profile.email|default:"-" }}</div>
+                    </div>
+                    <hr>
+                    <!-- Vaccine & Test -->
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">การรับวัคซีน:</small></div>
+                        <div class="col-md-10">
+                            {% if staff_profile.vaccine_dose_1 %}<span class="badge bg-success me-1">เข็ม 1</span>{% endif %}
+                            {% if staff_profile.vaccine_dose_2 %}<span class="badge bg-success me-1">เข็ม 2</span>{% endif %}
+                            {% if staff_profile.vaccine_dose_3 %}<span class="badge bg-success me-1">เข็ม 3</span>{% endif %}
+                            {% if staff_profile.vaccine_dose_4 %}<span class="badge bg-success me-1">เข็ม 4</span>{% endif %}
+                            {% if not staff_profile.vaccine_dose_1 and not staff_profile.vaccine_dose_2 and not staff_profile.vaccine_dose_3 and not staff_profile.vaccine_dose_4 %}<span class="text-muted">-</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-2"><small class="text-muted">การตรวจโควิด:</small></div>
+                        <div class="col-md-10">
+                            {% if staff_profile.test_rt_pcr %}<span class="badge bg-info me-1">RT-PCR</span>{% endif %}
+                            {% if staff_profile.test_atk %}<span class="badge bg-info me-1">ATK</span>{% endif %}
+                            {% if staff_profile.test_temperature %}<span class="badge bg-info me-1">วัดอุณหภูมิ</span>{% endif %}
+                            {% if not staff_profile.test_rt_pcr and not staff_profile.test_atk and not staff_profile.test_temperature %}<span class="text-muted">-</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    {% if staff_profile.notes %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-2"><small class="text-muted">หมายเหตุ:</small></div>
+                        <div class="col-md-10">{{ staff_profile.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Request Info Card -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="bi bi-info-circle"></i> ข้อมูลคำขอ</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-3"><small class="text-muted">ส่งโดย:</small></div>
+                        <div class="col-md-3">
+                            {% if badge_request.created_by %}
+                                {{ badge_request.created_by.get_full_name|default:badge_request.created_by.username }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3"><small class="text-muted">ส่งเมื่อ:</small></div>
+                        <div class="col-md-3">
+                            {% if badge_request.submitted_at %}
+                                {{ badge_request.submitted_at|date:"d/m/Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if badge_request.reviewed_by %}
+                    <div class="row mb-2">
+                        <div class="col-md-3"><small class="text-muted">ตรวจสอบโดย:</small></div>
+                        <div class="col-md-3">{{ badge_request.reviewed_by.get_full_name|default:badge_request.reviewed_by.username }}</div>
+                        <div class="col-md-3"><small class="text-muted">ตรวจสอบเมื่อ:</small></div>
+                        <div class="col-md-3">
+                            {% if badge_request.reviewed_at %}
+                                {{ badge_request.reviewed_at|date:"d/m/Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if badge_request.approved_by %}
+                    <div class="row mb-2">
+                        <div class="col-md-3"><small class="text-muted">อนุมัติโดย:</small></div>
+                        <div class="col-md-3">
+                            <strong class="text-success">{{ badge_request.approved_by.get_full_name|default:badge_request.approved_by.username }}</strong>
+                        </div>
+                        <div class="col-md-3"><small class="text-muted">อนุมัติเมื่อ:</small></div>
+                        <div class="col-md-3">
+                            {% if badge_request.approved_at %}
+                                <strong class="text-success">{{ badge_request.approved_at|date:"d/m/Y H:i" }}</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if badge_request.rejection_reason %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-3"><small class="text-muted">เหตุผลส่งกลับ:</small></div>
+                        <div class="col-md-9"><span class="text-danger">{{ badge_request.rejection_reason }}</span></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Approval History Card -->
+            {% if approval_logs %}
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="bi bi-clock-history"></i> ประวัติการดำเนินการ</strong>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for log in approval_logs %}
+                        <div class="timeline-item mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> {{ log.performed_at|date:"d/m/Y H:i" }}
+                                    </small>
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="mb-2">
+                                        <strong>
+                                            {% if log.action == 'submit' %}
+                                                <i class="bi bi-send text-primary"></i> ส่งคำขอ
+                                            {% elif log.action == 'approve' %}
+                                                <i class="bi bi-check-circle text-success"></i> อนุมัติ
+                                            {% elif log.action == 'reject' %}
+                                                <i class="bi bi-x-circle text-danger"></i> ส่งกลับแก้ไข
+                                            {% elif log.action == 'edit' %}
+                                                <i class="bi bi-pencil text-warning"></i> แก้ไข
+                                            {% elif log.action == 'comment' %}
+                                                <i class="bi bi-chat-left-text text-info"></i> แสดงความคิดเห็น
+                                            {% else %}
+                                                <i class="bi bi-dot"></i> {{ log.get_action_display }}
+                                            {% endif %}
+                                        </strong>
+                                        <span class="text-muted">โดย {{ log.performed_by.get_full_name|default:log.performed_by.username }}</span>
+                                    </div>
+                                    {% if log.comment %}
+                                    <div class="mb-2">
+                                        <span class="badge bg-light text-dark">
+                                            <i class="bi bi-chat-quote"></i> {{ log.comment }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <small>
+                                            <span class="text-muted">สถานะ:</span>
+                                            {% load registry_tags %}
+                                            <strong>{{ log.previous_status|status_display }}</strong>
+                                            <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                                            <strong class="
+                                                {% if log.new_status == 'approved' %}text-success
+                                                {% elif log.new_status == 'rejected' %}text-danger
+                                                {% elif log.new_status == 'submitted' %}text-primary
+                                                {% elif log.new_status == 'under_review' %}text-warning
+                                                {% else %}text-info
+                                                {% endif %}">
+                                                {{ log.new_status|status_display }}
+                                            </strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-check-circle text-success"></i> อนุมัติคำขอ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'approvals:approve_request' badge_request.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังอนุมัติคำขอของ <strong>{{ staff_profile.full_name }}</strong>
+                    </div>
+                    <p>คุณต้องการดำเนินการต่อหรือไม่?</p>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">ความคิดเห็น (ถ้ามี)</label>
+                        <textarea name="comment" id="comment" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> ยืนยันอนุมัติ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-x-circle text-danger"></i> ส่งกลับแก้ไข</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'approvals:reject_request' badge_request.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        คุณกำลังส่งกลับคำขอของ <strong>{{ staff_profile.full_name }}</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">เหตุผลในการส่งกลับ <span class="text-danger">*</span></label>
+                        <textarea name="rejection_reason" id="rejection_reason" class="form-control" rows="4" required></textarea>
+                        <small class="text-muted">เหตุผลนี้จะถูกส่งไปยังผู้ส่งคำขอ</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> ยืนยันส่งกลับ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

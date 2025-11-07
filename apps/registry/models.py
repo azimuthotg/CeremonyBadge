@@ -24,16 +24,6 @@ class Zone(models.Model):
         verbose_name="คำอธิบาย",
         help_text="รายละเอียดเพิ่มเติมเกี่ยวกับโซน"
     )
-    work_start_date = models.DateField(
-        blank=True,
-        null=True,
-        verbose_name="วันที่เริ่มปฏิบัติงาน"
-    )
-    work_end_date = models.DateField(
-        blank=True,
-        null=True,
-        verbose_name="วันที่สิ้นสุดการปฏิบัติงาน"
-    )
     order = models.IntegerField(
         default=0,
         verbose_name="ลำดับการแสดงผล",
@@ -58,10 +48,7 @@ class Zone(models.Model):
     @property
     def full_description(self):
         """คำอธิบายแบบเต็ม"""
-        desc = f"{self.name} ({self.code})"
-        if self.work_start_date and self.work_end_date:
-            desc += f" | {self.work_start_date.strftime('%d/%m/%Y')} - {self.work_end_date.strftime('%d/%m/%Y')}"
-        return desc
+        return f"{self.name} ({self.code})"
 
 class StaffProfile(models.Model):
     """ข้อมูลบุคลากรผู้ปฏิบัติงาน"""

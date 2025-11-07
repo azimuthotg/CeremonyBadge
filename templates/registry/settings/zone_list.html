@@ -46,9 +46,8 @@
                                 <tr>
                                     <th width="5%">ลำดับ</th>
                                     <th width="10%">รหัสโซน</th>
-                                    <th width="25%">ชื่อโซน</th>
-                                    <th width="25%">คำอธิบาย</th>
-                                    <th width="15%">วันที่ปฏิบัติงาน</th>
+                                    <th width="30%">ชื่อโซน</th>
+                                    <th width="35%">คำอธิบาย</th>
                                     <th width="10%">สถานะ</th>
                                     <th width="10%" class="text-center">จัดการ</th>
                                 </tr>
@@ -59,17 +58,7 @@
                                     <td>{{ zone.order }}</td>
                                     <td><strong><span class="badge bg-primary">{{ zone.code }}</span></strong></td>
                                     <td>{{ zone.name }}</td>
-                                    <td><small>{{ zone.description|default:"-"|truncatewords:10 }}</small></td>
-                                    <td>
-                                        {% if zone.work_start_date and zone.work_end_date %}
-                                        <small>
-                                            {{ zone.work_start_date|date:"d/m/Y" }}<br>
-                                            ถึง {{ zone.work_end_date|date:"d/m/Y" }}
-                                        </small>
-                                        {% else %}
-                                        <small class="text-muted">-</small>
-                                        {% endif %}
-                                    </td>
+                                    <td><small>{{ zone.description|default:"-"|truncatewords:15 }}</small></td>
                                     <td>
                                         {% if zone.is_active %}
                                         <span class="badge bg-success">ใช้งาน</span>
@@ -122,7 +111,7 @@
                     <li>ลำดับจะใช้ในการเรียงโซนเมื่อแสดงผลในฟอร์มลงทะเบียน</li>
                     <li>การปิดใช้งานจะทำให้ไม่สามารถเลือกโซนนี้เมื่อลงทะเบียนใหม่</li>
                     <li>โซนที่มีบุคลากรใช้งานอยู่จะไม่สามารถลบได้</li>
-                    <li>วันที่ปฏิบัติงานจะแสดงในหน้ารายละเอียดบุคลากร</li>
+                    <li>คำอธิบายโซนจะแสดงในหน้ารายละเอียดบุคลากร</li>
                 </ul>
             </div>
         </div>

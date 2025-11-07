@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}รายละเอียดบัตร - {{ badge.badge_number }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-credit-card-2-front"></i> รายละเอียดบัตร</h2>
+            <p class="text-muted">หมายเลข: <strong>{{ badge.badge_number }}</strong></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'badges:badge_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> ย้อนกลับ
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Badge Image -->
+        <div class="col-md-6">
+            <!-- Badge Image Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <strong><i class="bi bi-image"></i> รูปบัตร</strong>
+                </div>
+                <div class="card-body text-center">
+                    {% if badge.badge_file %}
+                        <img src="{{ badge.badge_file.url }}" alt="Badge" class="img-fluid rounded shadow" style="max-width: 100%; border: 2px solid #ddd;">
+                        <div class="mt-3">
+                            <a href="{{ badge.badge_file.url }}" download class="btn btn-primary">
+                                <i class="bi bi-download"></i> ดาวน์โหลด
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="py-5 bg-light rounded">
+                            <i class="bi bi-image" style="font-size: 4rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">ไม่พบรูปบัตร</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Badge Status Card -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <strong><i class="bi bi-info-circle"></i> สถานะบัตร</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-6"><small class="text-muted">สถานะการพิมพ์:</small></div>
+                        <div class="col-6">
+                            {% if badge.is_printed %}
+                                <span class="badge bg-success">พิมพ์แล้ว</span>
+                            {% else %}
+                                <span class="badge bg-secondary">ยังไม่พิมพ์</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6"><small class="text-muted">จำนวนครั้งที่พิมพ์:</small></div>
+                        <div class="col-6"><strong>{{ badge.printed_count }}</strong> ครั้ง</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6"><small class="text-muted">สถานะใช้งาน:</small></div>
+                        <div class="col-6">
+                            {% if badge.is_active %}
+                                <span class="badge bg-success">ใช้งานได้</span>
+                            {% else %}
+                                <span class="badge bg-danger">ระงับการใช้งาน</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><small class="text-muted">สร้างเมื่อ:</small></div>
+                        <div class="col-6"><small>{{ badge.created_at|date:"d/m/Y H:i" }}</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Staff Info -->
+        <div class="col-md-6">
+            <!-- Staff Info Card -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="bi bi-person-vcard"></i> ข้อมูลบุคลากร</strong>
+                </div>
+                <div class="card-body">
+                    {% with staff=badge.staff_profile %}
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">ชื่อ-นามสกุล:</small></div>
+                        <div class="col-8"><strong>{{ staff.full_name }}</strong></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">หน่วยงาน:</small></div>
+                        <div class="col-8">{{ staff.department.name }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">ตำแหน่ง:</small></div>
+                        <div class="col-8">{{ staff.position }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">ประเภทบัตร:</small></div>
+                        <div class="col-8">
+                            <span class="badge" style="background-color: {{ badge.badge_type.color_code }}; font-size: 1rem; padding: 6px 12px;">
+                                {{ badge.badge_type.name }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if staff.zone %}
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">โซน:</small></div>
+                        <div class="col-8">{{ staff.zone.code }} - {{ staff.zone.name }}</div>
+                    </div>
+                    {% endif %}
+                    {% if staff.phone %}
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">เบอร์โทร:</small></div>
+                        <div class="col-8">{{ staff.phone }}</div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <!-- Signature Info Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <strong><i class="bi bi-pen"></i> ข้อมูลผู้เซ็นบัตร</strong>
+                </div>
+                <div class="card-body">
+                    {% if badge.signatory %}
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">ผู้เซ็น:</small></div>
+                        <div class="col-8"><strong>{{ badge.signatory.full_name }}</strong></div>
+                    </div>
+                    {% if badge.signatory.department %}
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">หน่วยงาน:</small></div>
+                        <div class="col-8">{{ badge.signatory.department }}</div>
+                    </div>
+                    {% endif %}
+                    {% if badge.signatory.position %}
+                    <div class="row mb-2">
+                        <div class="col-4"><small class="text-muted">ตำแหน่ง:</small></div>
+                        <div class="col-8">{{ badge.signatory.position }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-4"><small class="text-muted">ประเภทลายเซ็น:</small></div>
+                        <div class="col-8">
+                            {% if badge.signature_type == 'manual' %}
+                                <span class="badge bg-primary">เซ็นมือจริง</span>
+                            {% elif badge.signature_type == 'electronic' %}
+                                <span class="badge bg-success">ลายเซ็นอิเล็กทรอนิกส์</span>
+                            {% else %}
+                                <span class="badge bg-secondary">ไม่ระบุ</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">ยังไม่มีข้อมูลผู้เซ็น</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Update Signature Type Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <strong><i class="bi bi-pencil-square"></i> เปลี่ยนประเภทลายเซ็น</strong>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'badges:update_signature' badge.id %}" id="updateSignatureForm">
+                        {% csrf_token %}
+
+                        <!-- Signature Type Selection -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>ประเภทลายเซ็น</strong></label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="signature_type" id="sig_manual" value="manual" {% if badge.signature_type == 'manual' %}checked{% endif %} onchange="toggleSignatureInfo()">
+                                <label class="form-check-label" for="sig_manual">
+                                    <i class="bi bi-pencil"></i> เซ็นมือจริง (ไม่ใส่ลายเซ็น)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="signature_type" id="sig_electronic" value="electronic" {% if badge.signature_type == 'electronic' %}checked{% endif %} onchange="toggleSignatureInfo()">
+                                <label class="form-check-label" for="sig_electronic">
+                                    <i class="bi bi-pen"></i> ลายเซ็นต์อิเล็กทรอนิกส์
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- คำอธิบาย -->
+                        <div class="mb-3">
+                            <div class="alert alert-info" id="infoManual" {% if badge.signature_type != 'manual' %}style="display: none;"{% endif %}>
+                                <i class="bi bi-info-circle"></i>
+                                <strong>เซ็นมือจริง:</strong> แสดงชื่อผู้เซ็น และเว้นพื้นที่ให้เซ็นมือจริง
+                            </div>
+                            <div class="alert alert-success" id="infoElectronic" {% if badge.signature_type != 'electronic' %}style="display: none;"{% endif %}>
+                                <i class="bi bi-info-circle"></i>
+                                <strong>ลายเซ็นอิเล็กทรอนิกส์:</strong> แสดงชื่อผู้เซ็นพร้อมประทับรูปลายเซ็น
+                            </div>
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="bi bi-save"></i> บันทึกการเปลี่ยนแปลง
+                            </button>
+                        </div>
+                    </form>
+
+                    <script>
+                    function toggleSignatureInfo() {
+                        const electronic = document.getElementById('sig_electronic').checked;
+                        const infoManual = document.getElementById('infoManual');
+                        const infoElectronic = document.getElementById('infoElectronic');
+
+                        if (electronic) {
+                            infoManual.style.display = 'none';
+                            infoElectronic.style.display = 'block';
+                        } else {
+                            infoManual.style.display = 'block';
+                            infoElectronic.style.display = 'none';
+                        }
+                    }
+                    </script>
+                </div>
+            </div>
+
+            <!-- Print Log Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-warning">
+                    <strong><i class="bi bi-printer"></i> บันทึกการพิมพ์</strong>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'badges:print_badge' badge.id %}" id="printForm">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">หมายเหตุ</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="2" placeholder="ระบุหมายเหตุการพิมพ์..."></textarea>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-printer-fill"></i> บันทึกการพิมพ์
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Print History Card -->
+            {% if print_logs %}
+            <div class="card">
+                <div class="card-header bg-light">
+                    <strong><i class="bi bi-clock-history"></i> ประวัติการพิมพ์</strong>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for log in print_logs %}
+                        <div class="mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                            <div class="row">
+                                <div class="col-4">
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> {{ log.printed_at|date:"d/m/Y H:i" }}
+                                    </small>
+                                </div>
+                                <div class="col-8">
+                                    <div>
+                                        <strong><i class="bi bi-printer text-warning"></i> พิมพ์</strong>
+                                        <small class="text-muted">โดย {{ log.printed_by.get_full_name|default:log.printed_by.username }}</small>
+                                    </div>
+                                    {% if log.notes %}
+                                    <div class="mt-1">
+                                        <small class="text-muted">{{ log.notes }}</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -33,6 +33,22 @@
         </div>
     </div>
 
+    <!-- Bulk Actions Bar -->
+    <div class="card mb-3" id="bulk-actions-bar" style="display: none;">
+        <div class="card-body bg-light">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <span id="selected-count" class="fw-bold">0</span> รายการที่เลือก
+                </div>
+                <div class="col-md-6 text-end">
+                    <button type="button" class="btn btn-success" id="bulk-submit-btn">
+                        <i class="bi bi-send"></i> ส่งคำขอที่เลือก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Staff List -->
     <div class="row">
         <div class="col-12">
@@ -43,7 +59,9 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th width="5%">#</th>
+                                    <th width="50">
+                                        <input type="checkbox" class="form-check-input" id="select-all">
+                                    </th>
                                     <th width="25%">ชื่อ-นามสกุล</th>
                                     <th width="20%">ตำแหน่ง</th>
                                     <th width="15%">ประเภทบัตร</th>
@@ -55,7 +73,13 @@
                             <tbody>
                                 {% for staff in staff_profiles %}
                                 <tr>
-                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        {% if not staff.badge_request %}
+                                        <input type="checkbox" class="form-check-input staff-checkbox" value="{{ staff.id }}">
+                                        {% elif staff.badge_request.status == 'draft' or staff.badge_request.status == 'photo_uploaded' or staff.badge_request.status == 'ready_to_submit' or staff.badge_request.status == 'rejected' %}
+                                        <input type="checkbox" class="form-check-input staff-checkbox" value="{{ staff.id }}">
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <strong>{{ staff.get_title_display }} {{ staff.first_name }} {{ staff.last_name }}</strong>
                                     </td>
@@ -66,15 +90,13 @@
                                         </span>
                                     </td>
                                     <td>
-                                        {% with request=staff.badge_request.first %}
-                                        {% if request %}
-                                            <span class="badge-status {{ request.status }}">
-                                                {{ request.get_status_display }}
+                                        {% if staff.badge_request %}
+                                            <span class="badge-status {{ staff.badge_request.status }}">
+                                                {{ staff.badge_request.get_status_display }}
                                             </span>
                                         {% else %}
                                             <span class="badge-status draft">ยังไม่สร้างคำขอ</span>
                                         {% endif %}
-                                        {% endwith %}
                                     </td>
                                     <td>
                                         <small>{{ staff.created_at|date:"d/m/Y" }}</small>
@@ -84,19 +106,28 @@
                                             <a href="{% url 'registry:staff_detail' staff.id %}" class="btn btn-outline-primary" title="ดูรายละเอียด">
                                                 <i class="bi bi-eye"></i>
                                             </a>
+
+                                            {% if not staff.badge_request %}
                                             <a href="{% url 'registry:wizard_step1_edit' staff.id %}" class="btn btn-outline-secondary" title="แก้ไข">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             <a href="{% url 'registry:staff_delete' staff.id %}" class="btn btn-outline-danger" title="ลบ">
                                                 <i class="bi bi-trash"></i>
                                             </a>
-                                            {% with request=staff.badge_request.first %}
-                                            {% if request and request.status == 'ready_to_submit' %}
-                                            <a href="{% url 'registry:wizard_submit' request.id %}" class="btn btn-outline-success" title="ส่งคำขอ">
+                                            {% elif staff.badge_request.status == 'draft' or staff.badge_request.status == 'photo_uploaded' or staff.badge_request.status == 'ready_to_submit' or staff.badge_request.status == 'rejected' %}
+                                            <a href="{% url 'registry:wizard_step1_edit' staff.id %}" class="btn btn-outline-secondary" title="แก้ไข">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'registry:staff_delete' staff.id %}" class="btn btn-outline-danger" title="ลบ">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                            {% endif %}
+
+                                            {% if staff.badge_request and staff.badge_request.status == 'ready_to_submit' %}
+                                            <a href="{% url 'registry:wizard_submit' staff.badge_request.id %}" class="btn btn-outline-success" title="ส่งคำขอ">
                                                 <i class="bi bi-send"></i>
                                             </a>
                                             {% endif %}
-                                            {% endwith %}
                                         </div>
                                     </td>
                                 </tr>
@@ -124,4 +155,96 @@
         </div>
     </div>
 </div>
+
+<!-- Bulk Submit Modal -->
+<div class="modal fade" id="bulkSubmitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-send"></i> ส่งคำขอที่เลือก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-submit-form" action="{% url 'registry:bulk_submit' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังส่งคำขอ <strong><span id="bulk-submit-count">0</span></strong> รายการ
+                    </div>
+                    <p>คุณต้องการดำเนินการต่อหรือไม่?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-send"></i> ยืนยันส่งคำขอ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.staff-checkbox');
+    const bulkActionsBar = document.getElementById('bulk-actions-bar');
+    const selectedCount = document.getElementById('selected-count');
+    const bulkSubmitBtn = document.getElementById('bulk-submit-btn');
+
+    // Select all functionality
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            updateBulkActions();
+        });
+    }
+
+    // Individual checkbox change
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkActions);
+    });
+
+    function updateBulkActions() {
+        const selected = Array.from(checkboxes).filter(cb => cb.checked);
+        const count = selected.length;
+
+        if (count > 0) {
+            bulkActionsBar.style.display = 'block';
+            selectedCount.textContent = count;
+        } else {
+            bulkActionsBar.style.display = 'none';
+        }
+
+        // Update select all checkbox state
+        if (selectAll) {
+            selectAll.checked = count === checkboxes.length && count > 0;
+            selectAll.indeterminate = count > 0 && count < checkboxes.length;
+        }
+    }
+
+    // Bulk submit
+    if (bulkSubmitBtn) {
+        bulkSubmitBtn.addEventListener('click', function() {
+            const selected = Array.from(checkboxes).filter(cb => cb.checked);
+            document.getElementById('bulk-submit-count').textContent = selected.length;
+
+            const form = document.getElementById('bulk-submit-form');
+            // Clear previous hidden inputs
+            form.querySelectorAll('input[name="staff_ids"]').forEach(input => input.remove());
+
+            // Add selected IDs
+            selected.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'staff_ids';
+                input.value = cb.value;
+                form.appendChild(input);
+            });
+
+            new bootstrap.Modal(document.getElementById('bulkSubmitModal')).show();
+        });
+    }
+});
+</script>
 {% endblock %}

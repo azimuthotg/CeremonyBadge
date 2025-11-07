@@ -18,6 +18,9 @@ urlpatterns = [
     path('staff/<int:staff_id>/', views.staff_detail, name='staff_detail'),
     path('staff/<int:staff_id>/delete/', views.staff_delete, name='staff_delete'),
 
+    # Bulk Actions
+    path('bulk/submit/', views.bulk_submit, name='bulk_submit'),
+
     # Badge Type Management
     path('settings/badge-types/', views.badge_type_list, name='badge_type_list'),
     path('settings/badge-types/<int:badge_type_id>/edit/', views.badge_type_edit, name='badge_type_edit'),
@@ -28,4 +31,7 @@ urlpatterns = [
     path('settings/zones/create/', views.zone_create, name='zone_create'),
     path('settings/zones/<int:zone_id>/edit/', views.zone_edit, name='zone_edit'),
     path('settings/zones/<int:zone_id>/delete/', views.zone_delete, name='zone_delete'),
+
+    # Work Dates Management
+    path('settings/work-dates/', views.work_dates_settings, name='work_dates_settings'),
 ]

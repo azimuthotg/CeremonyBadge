@@ -32,7 +32,8 @@ urlpatterns = [
     # Apps URLs
     path('accounts/', include('apps.accounts.urls')),
     path('registry/', include('apps.registry.urls')),
-    # path('badges/', include('apps.badges.urls')),
+    path('approvals/', include('apps.approvals.urls')),
+    path('badges/', include('apps.badges.urls')),
     # path('reports/', include('apps.reports.urls')),
 ]
 

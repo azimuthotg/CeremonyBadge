@@ -57,90 +57,144 @@
 
                     <!-- Staff Information -->
                     <h5 class="mb-3"><i class="bi bi-person-badge"></i> ข้อมูลบุคลากร</h5>
+
+                    <!-- Personal Info -->
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">ยศ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.title|default:"-" }}</div>
+                        <div class="col-md-2"><small class="text-muted">ชื่อ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.first_name }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">นามสกุล:</small></div>
+                        <div class="col-md-4">{{ staff_profile.last_name }}</div>
+                        <div class="col-md-2"><small class="text-muted">บัตรประชาชน:</small></div>
+                        <div class="col-md-4">{{ staff_profile.national_id|default:"-" }}</div>
+                    </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>ชื่อ-นามสกุล</label>
-                                <div>{{ staff_profile.get_title_display }} {{ staff_profile.first_name }} {{ staff_profile.last_name }}</div>
-                            </div>
+                        <div class="col-md-2"><small class="text-muted">อายุ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.age|default:"-" }} ปี</div>
+                        <div class="col-md-2"><small class="text-muted">ทะเบียนรถ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.vehicle_registration|default:"-" }}</div>
+                    </div>
+                    <hr>
+
+                    <!-- Work Info -->
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">หน่วยงาน:</small></div>
+                        <div class="col-md-4">{{ staff_profile.department.name }}</div>
+                        <div class="col-md-2"><small class="text-muted">หน้าที่:</small></div>
+                        <div class="col-md-4">{{ staff_profile.position }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">ประเภทบัตร:</small></div>
+                        <div class="col-md-4">
+                            <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }};">
+                                {{ staff_profile.badge_type.name }}
+                            </span>
                         </div>
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>ตำแหน่ง</label>
-                                <div>{{ staff_profile.position }}</div>
-                            </div>
+                        <div class="col-md-2"><small class="text-muted">คำอธิบายประเภทบัตร:</small></div>
+                        <div class="col-md-4">
+                            {% if staff_profile.badge_type.description %}
+                                {{ staff_profile.badge_type.description }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">โซน:</small></div>
+                        <div class="col-md-4">
+                            {% if staff_profile.zone %}
+                                {{ staff_profile.zone.code }} - {{ staff_profile.zone.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2"><small class="text-muted">คำอธิบายโซน:</small></div>
+                        <div class="col-md-4">
+                            {% if staff_profile.zone and staff_profile.zone.description %}
+                                {{ staff_profile.zone.description }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">วันที่ปฏิบัติงาน:</small></div>
+                        <div class="col-md-10">
+                            {% if work_dates_display %}
+                                <span class="text-primary fw-bold">{{ work_dates_display }}</span>
+                            {% else %}
+                                <span class="text-muted">ยังไม่ได้กำหนดวันที่ปฏิบัติงาน</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+
+                    <!-- Contact Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-2"><small class="text-muted">เบอร์โทร:</small></div>
+                        <div class="col-md-4">{{ staff_profile.phone|default:"-" }}</div>
+                        <div class="col-md-2"><small class="text-muted">อีเมล:</small></div>
+                        <div class="col-md-4">{{ staff_profile.email|default:"-" }}</div>
+                    </div>
+                    <hr>
+
+                    <!-- Vaccine & Test -->
+                    <div class="row mb-2">
+                        <div class="col-md-2"><small class="text-muted">การรับวัคซีน:</small></div>
+                        <div class="col-md-10">
+                            {% if staff_profile.vaccine_dose_1 %}<span class="badge bg-success me-1">เข็ม 1</span>{% endif %}
+                            {% if staff_profile.vaccine_dose_2 %}<span class="badge bg-success me-1">เข็ม 2</span>{% endif %}
+                            {% if staff_profile.vaccine_dose_3 %}<span class="badge bg-success me-1">เข็ม 3</span>{% endif %}
+                            {% if staff_profile.vaccine_dose_4 %}<span class="badge bg-success me-1">เข็ม 4</span>{% endif %}
+                            {% if not staff_profile.vaccine_dose_1 and not staff_profile.vaccine_dose_2 and not staff_profile.vaccine_dose_3 and not staff_profile.vaccine_dose_4 %}<span class="text-muted">-</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-2"><small class="text-muted">การตรวจโควิดก่อนการปฏิบัติงาน:</small></div>
+                        <div class="col-md-10">
+                            {% if staff_profile.test_rt_pcr %}<span class="badge bg-info me-1">RT-PCR</span>{% endif %}
+                            {% if staff_profile.test_atk %}<span class="badge bg-info me-1">ATK</span>{% endif %}
+                            {% if staff_profile.test_temperature %}<span class="badge bg-info me-1">วัดอุณหภูมิ</span>{% endif %}
+                            {% if not staff_profile.test_rt_pcr and not staff_profile.test_atk and not staff_profile.test_temperature %}<span class="text-muted">-</span>{% endif %}
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>หน่วยงาน</label>
-                                <div>{{ staff_profile.department.name }}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>ประเภทบัตร</label>
-                                <div>
-                                    <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }};">
-                                        {{ staff_profile.badge_type.name }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>เบอร์โทรศัพท์</label>
-                                <div>{{ staff_profile.phone|default:"-" }}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>อีเมล</label>
-                                <div>{{ staff_profile.email|default:"-" }}</div>
-                            </div>
-                        </div>
-                    </div>
-
+                    <!-- Notes -->
                     {% if staff_profile.notes %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="info-item">
-                                <label>หมายเหตุ</label>
-                                <div>{{ staff_profile.notes }}</div>
-                            </div>
-                        </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-2"><small class="text-muted">หมายเหตุ:</small></div>
+                        <div class="col-md-10">{{ staff_profile.notes }}</div>
                     </div>
                     {% endif %}
 
-                    <div class="mt-2">
-                        <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-pencil"></i> แก้ไขข้อมูล
-                        </a>
-                    </div>
-
                     <hr class="my-4">
 
-                    <!-- Confirmation Form -->
+                    <!-- Action Buttons -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>เลือกการดำเนินการ:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>บันทึก:</strong> บันทึกข้อมูลไว้ก่อน สามารถส่งคำขอทีหลังได้</li>
+                            <li><strong>บันทึกและส่งคำขอ:</strong> ส่งเข้าระบบอนุมัติทันที</li>
+                        </ul>
+                    </div>
+
                     <form method="post">
                         {% csrf_token %}
-                        <div class="form-check mb-4">
-                            <input class="form-check-input" type="checkbox" id="confirm" name="confirm" required>
-                            <label class="form-check-label" for="confirm">
-                                <strong>ฉันยืนยันว่าข้อมูลทั้งหมดถูกต้องและครบถ้วน</strong>
-                            </label>
-                        </div>
 
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 mt-4">
                             <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-arrow-left-circle"></i> ย้อนกลับ
                             </a>
-                            <button type="submit" class="btn btn-success btn-lg flex-grow-1">
-                                <i class="bi bi-check-circle"></i> บันทึกและพร้อมส่ง
+                            <button type="submit" name="action" value="save" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save"></i> บันทึก
+                            </button>
+                            <button type="submit" name="action" value="submit" class="btn btn-success btn-lg flex-grow-1">
+                                <i class="bi bi-send-check"></i> บันทึกและส่งคำขอ
                             </button>
                         </div>
                     </form>

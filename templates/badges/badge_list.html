@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}รายการบัตร{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-credit-card-2-front"></i> รายการบัตร</h2>
+            <p class="text-muted">บัตรที่สร้างแล้วทั้งหมด</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-primary" style="font-size: 1.2rem; padding: 10px 20px;">
+                <i class="bi bi-credit-card"></i> {{ badges.count }} บัตร
+            </span>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="ค้นหาหมายเลขบัตร, ชื่อ-นามสกุล..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="badge_type" class="form-select">
+                        <option value="">-- ประเภทบัตรทั้งหมด --</option>
+                        {% for bt in badge_types %}
+                        <option value="{{ bt.id }}" {% if selected_badge_type == bt.id|stringformat:"s" %}selected{% endif %}>
+                            {{ bt.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="printed" class="form-select">
+                        <option value="">-- สถานะทั้งหมด --</option>
+                        <option value="yes" {% if selected_printed == 'yes' %}selected{% endif %}>พิมพ์แล้ว</option>
+                        <option value="no" {% if selected_printed == 'no' %}selected{% endif %}>ยังไม่พิมพ์</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> ค้นหา
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Badges Grid -->
+    <div class="row">
+        {% if badges %}
+            {% for badge in badges %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <!-- Badge Image -->
+                        <div class="text-center mb-3">
+                            {% if badge.badge_file %}
+                                <img src="{{ badge.badge_file.url }}" alt="Badge" class="img-fluid rounded" style="max-height: 300px; border: 2px solid #ddd;">
+                            {% else %}
+                                <div class="py-5 bg-light rounded">
+                                    <i class="bi bi-image" style="font-size: 3rem; color: #ccc;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Badge Info -->
+                        <h5 class="card-title">
+                            <span class="badge" style="background-color: {{ badge.badge_type.color_code }};">
+                                {{ badge.badge_number }}
+                            </span>
+                        </h5>
+                        <p class="card-text">
+                            <strong>{{ badge.staff_profile.full_name }}</strong><br>
+                            <small class="text-muted">{{ badge.staff_profile.position }}</small><br>
+                            <small class="text-muted">{{ badge.staff_profile.department.name }}</small>
+                        </p>
+
+                        <!-- Status -->
+                        <div class="mb-3">
+                            {% if badge.is_printed %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-printer-fill"></i> พิมพ์แล้ว ({{ badge.printed_count }} ครั้ง)
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-printer"></i> ยังไม่พิมพ์
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'badges:badge_detail' badge.id %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-eye"></i> ดูรายละเอียด
+                            </a>
+                            <a href="{{ badge.badge_file.url }}" download class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-download"></i> ดาวน์โหลด
+                            </a>
+                            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ badge.id }}">
+                                <i class="bi bi-trash"></i> ลบบัตร
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>
+                            <i class="bi bi-clock"></i> สร้างเมื่อ: {{ badge.created_at|date:"d/m/Y H:i" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">
+                        {% if search %}
+                            ไม่พบผลการค้นหา
+                        {% else %}
+                            ยังไม่มีบัตรในระบบ
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Modals -->
+{% for badge in badges %}
+<div class="modal fade" id="deleteModal{{ badge.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบบัตร</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'badges:delete_badge' badge.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>คำเตือน:</strong> การลบบัตรนี้จะไม่สามารถกู้คืนได้!
+                    </div>
+                    <p><strong>บัตรที่จะลบ:</strong></p>
+                    <ul>
+                        <li>หมายเลข: <strong>{{ badge.badge_number }}</strong></li>
+                        <li>ชื่อ: <strong>{{ badge.staff_profile.full_name }}</strong></li>
+                        <li>ประเภท: <strong>{{ badge.badge_type.name }}</strong></li>
+                    </ul>
+                    <p class="text-muted">คุณแน่ใจหรือไม่ว่าต้องการลบบัตรนี้?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> ยืนยันการลบ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

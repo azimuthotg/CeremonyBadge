@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}จัดการวันปฏิบัติงาน{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">จัดการวันปฏิบัติงาน</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-calendar-event"></i> จัดการวันปฏิบัติงาน</h2>
+            <p class="text-muted">กำหนดวันที่ปฏิบัติงานสำหรับพิธี (ทุกโซนใช้วันเดียวกัน)</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-event"></i> ตั้งค่าวันที่ปฏิบัติงาน</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Info Alert -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>หมายเหตุ:</strong> วันที่ที่กำหนดจะใช้กับทุกโซนปฏิบัติงาน และจะแสดงบนบัตร
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Work Date -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label">วันที่ปฏิบัติงาน <span class="text-danger">*</span></label>
+                                <input type="date" name="work_date" class="form-control form-control-lg" value="{{ work_date }}" required>
+                                <small class="text-muted">วันที่ปฏิบัติงานในพิธี (แสดงบนบัตร)</small>
+                            </div>
+                        </div>
+
+                        <!-- Current Settings Preview -->
+                        {% if work_date %}
+                        <div class="mb-4">
+                            <label class="form-label">การตั้งค่าปัจจุบัน</label>
+                            <div class="p-4 border rounded bg-light text-center">
+                                <div>
+                                    <small class="text-muted d-block">วันที่ปฏิบัติงาน</small>
+                                    <span class="text-primary fs-4 fw-bold">{{ work_date_thai }}</span>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar-check"></i> รูปแบบบนบัตร: {{ work_date_thai_short }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="bi bi-check-circle"></i> บันทึกการตั้งค่า
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Additional Info Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-square"></i> ข้อมูลเพิ่มเติม</h6>
+                </div>
+                <div class="card-body">
+                    <h6>วันที่ปฏิบัติงานใช้สำหรับ:</h6>
+                    <ul class="mb-0">
+                        <li><strong>แสดงบนบัตร</strong> ที่สร้างจากระบบ</li>
+                        <li>แสดงในหน้ารายละเอียดบุคลากร</li>
+                        <li>ทุกโซนปฏิบัติงาน (A, B, C) จะใช้วันที่เดียวกัน</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+input[type="date"].form-control-lg {
+    font-size: 1.1rem;
+    padding: 0.75rem;
+}
+</style>
+{% endblock %}

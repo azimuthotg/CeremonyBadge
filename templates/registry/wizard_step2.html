@@ -108,12 +108,21 @@
 
                         <!-- Buttons -->
                         <div class="mt-4 d-flex gap-2">
+                            {% if is_edit_mode %}
+                            <a href="{% url 'registry:staff_detail' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-arrow-left-circle"></i> ยกเลิก
+                            </a>
+                            <button type="submit" id="btn-submit" class="btn btn-success btn-lg flex-grow-1">
+                                <i class="bi bi-check-circle"></i> บันทึก
+                            </button>
+                            {% else %}
                             <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-arrow-left-circle"></i> ย้อนกลับ
                             </a>
                             <button type="submit" id="btn-submit" class="btn btn-primary btn-lg flex-grow-1">
                                 <i class="bi bi-arrow-right-circle"></i> ต่อไป: ตรวจสอบข้อมูล
                             </button>
+                            {% endif %}
                         </div>
                     </form>
                 </div>

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}จัดการผู้เซ็นบัตร{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-pen"></i> จัดการผู้เซ็นบัตร</h2>
+            <p class="text-muted">ผู้มีอำนาจเซ็นลายเซ็นต์อิเล็กทรอนิกส์บนบัตร</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'badges:signatory_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> เพิ่มผู้เซ็นใหม่
+            </a>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-10">
+                    <input type="text" name="search" class="form-control" placeholder="ค้นหาชื่อ-นามสกุล, ยศ, หน่วยงาน..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> ค้นหา
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Signatories List -->
+    <div class="row">
+        {% if signatories %}
+            {% for signatory in signatories %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 {% if not signatory.is_active %}border-secondary{% endif %}">
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Signature Image -->
+                            <div class="col-md-5 text-center">
+                                {% if signatory.signature_image %}
+                                    <img src="{{ signatory.signature_image.url }}" alt="Signature" class="img-fluid" style="max-height: 100px; border: 1px solid #ddd; padding: 10px; background: white;">
+                                {% else %}
+                                    <div class="py-4 bg-light rounded">
+                                        <i class="bi bi-image" style="font-size: 2rem; color: #ccc;"></i>
+                                        <p class="text-muted small">ไม่มีลายเซ็น</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Info -->
+                            <div class="col-md-7">
+                                <h5 class="card-title">
+                                    {{ signatory.full_name }}
+                                    {% if not signatory.is_active %}
+                                        <span class="badge bg-secondary">ไม่ใช้งาน</span>
+                                    {% else %}
+                                        <span class="badge bg-success">ใช้งาน</span>
+                                    {% endif %}
+                                </h5>
+                                <p class="card-text">
+                                    {% if signatory.position %}
+                                        <small><strong>ตำแหน่ง:</strong> {{ signatory.position }}<br></small>
+                                    {% endif %}
+                                    <small><strong>หน่วยงาน:</strong> {{ signatory.department }}</small>
+                                </p>
+
+                                <!-- Actions -->
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'badges:signatory_edit' signatory.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> แก้ไข
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ signatory.id }}">
+                                        <i class="bi bi-trash"></i> ลบ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small><i class="bi bi-clock"></i> สร้างเมื่อ: {{ signatory.created_at|date:"d/m/Y H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">
+                        {% if search %}
+                            ไม่พบผลการค้นหา
+                        {% else %}
+                            ยังไม่มีผู้เซ็นบัตรในระบบ
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Modals -->
+{% for signatory in signatories %}
+<div class="modal fade" id="deleteModal{{ signatory.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'badges:signatory_delete' signatory.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>คุณแน่ใจหรือไม่ว่าต้องการลบผู้เซ็นบัตร:</p>
+                    <p class="text-center"><strong>{{ signatory.full_name }}</strong></p>
+                    <p class="text-danger small">การลบจะไม่สามารถกู้คืนได้</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> ยืนยันการลบ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

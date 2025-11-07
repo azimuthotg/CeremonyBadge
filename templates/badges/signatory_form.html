@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if signatory %}แก้ไข{% else %}เพิ่ม{% endif %}ผู้เซ็นบัตร{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="mb-4">
+                <h2>
+                    <i class="bi bi-pen"></i>
+                    {% if signatory %}แก้ไขผู้เซ็นบัตร{% else %}เพิ่มผู้เซ็นบัตรใหม่{% endif %}
+                </h2>
+                <p class="text-muted">ผู้มีอำนาจเซ็นลายเซ็นต์อิเล็กทรอนิกส์บนบัตร</p>
+            </div>
+
+            <!-- Form -->
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="rank" class="form-label">ยศ/คำนำหน้า</label>
+                                <input type="text" name="rank" id="rank" class="form-control" value="{% if signatory %}{{ signatory.rank }}{% endif %}" placeholder="เช่น นาย, นาง, นางสาว, พลตำรวจโท">
+                                <small class="text-muted">ไม่บังคับ</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="first_name" class="form-label">ชื่อ <span class="text-danger">*</span></label>
+                                <input type="text" name="first_name" id="first_name" class="form-control" value="{% if signatory %}{{ signatory.first_name }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="last_name" class="form-label">นามสกุล <span class="text-danger">*</span></label>
+                                <input type="text" name="last_name" id="last_name" class="form-control" value="{% if signatory %}{{ signatory.last_name }}{% endif %}" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="position" class="form-label">ตำแหน่ง</label>
+                            <input type="text" name="position" id="position" class="form-control" value="{% if signatory %}{{ signatory.position }}{% endif %}" placeholder="เช่น ผู้อำนวยการ, รองผู้อำนวยการ">
+                            <small class="text-muted">ไม่บังคับ</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="department" class="form-label">หน่วยงาน <span class="text-danger">*</span></label>
+                            <input type="text" name="department" id="department" class="form-control" value="{% if signatory %}{{ signatory.department }}{% endif %}" required placeholder="เช่น มหาวิทยาลัยนครพนม">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="signature_image" class="form-label">
+                                ลายเซ็นต์อิเล็กทรอนิกส์ (PNG) {% if not signatory %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+
+                            {% if signatory and signatory.signature_image %}
+                            <div class="mb-2">
+                                <img src="{{ signatory.signature_image.url }}" alt="Current Signature" class="img-fluid" style="max-height: 100px; border: 1px solid #ddd; padding: 10px; background: white;">
+                                <p class="text-muted small mt-1">ลายเซ็นปัจจุบัน</p>
+                            </div>
+                            {% endif %}
+
+                            <input type="file" name="signature_image" id="signature_image" class="form-control" accept="image/png,image/jpeg" {% if not signatory %}required{% endif %}>
+                            <small class="text-muted">
+                                - ไฟล์ PNG โปร่งใสแนะนำ<br>
+                                - ขนาดแนะนำ: 400x150 px<br>
+                                - ขนาดไฟล์ไม่เกิน 2 MB
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" name="is_active" id="is_active" class="form-check-input" {% if not signatory or signatory.is_active %}checked{% endif %}>
+                                <label for="is_active" class="form-check-label">
+                                    เปิดใช้งาน
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'badges:signatory_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> ยกเลิก
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> {% if signatory %}บันทึกการแก้ไข{% else %}เพิ่มผู้เซ็น{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

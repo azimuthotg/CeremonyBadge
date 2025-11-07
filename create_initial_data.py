@@ -126,8 +126,6 @@ def create_zones():
             'code': 'A',
             'name': 'กอร.ถปภ. ณ มหาวิทยาลัยนครพนม',
             'description': 'พื้นที่ภายในมหาวิทยาลัยนครพนม - โซน A',
-            'work_start_date': date(2025, 12, 1),
-            'work_end_date': date(2025, 12, 15),
             'order': 1,
             'is_active': True
         },
@@ -135,8 +133,6 @@ def create_zones():
             'code': 'B',
             'name': 'กอร.ถปภ. ณ ท่าอากาศยานนครพนม',
             'description': 'พื้นที่ท่าอากาศยานนครพนม - โซน B',
-            'work_start_date': date(2025, 12, 1),
-            'work_end_date': date(2025, 12, 15),
             'order': 2,
             'is_active': True
         },
@@ -144,8 +140,6 @@ def create_zones():
             'code': 'C',
             'name': 'กอร.ถปภ. ณ จุดตรวจ',
             'description': 'พื้นที่จุดตรวจต่างๆ - โซน C',
-            'work_start_date': date(2025, 12, 1),
-            'work_end_date': date(2025, 12, 15),
             'order': 3,
             'is_active': True
         },
@@ -201,6 +195,18 @@ def create_system_settings():
             'value': 'false',
             'setting_type': 'boolean',
             'description': 'อนุมัติอัตโนมัติ (ไม่แนะนำ)'
+        },
+        {
+            'key': 'work_start_date',
+            'value': '2025-12-01',
+            'setting_type': 'string',
+            'description': 'วันที่เริ่มต้นปฏิบัติงาน (รูปแบบ YYYY-MM-DD)'
+        },
+        {
+            'key': 'work_end_date',
+            'value': '2025-12-15',
+            'setting_type': 'string',
+            'description': 'วันที่สิ้นสุดการปฏิบัติงาน (รูปแบบ YYYY-MM-DD)'
         },
     ]
 

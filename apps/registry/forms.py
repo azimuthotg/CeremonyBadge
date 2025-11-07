@@ -55,8 +55,9 @@ class StaffProfileForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        # Get user role from kwargs if provided
+        # Get user role and edit mode from kwargs if provided
         user_role = kwargs.pop('user_role', None)
+        is_edit_mode = kwargs.pop('is_edit_mode', False)
         super().__init__(*args, **kwargs)
 
         # Hide department field for submitters (they use their own department)
@@ -97,6 +98,12 @@ class StaffProfileForm(forms.ModelForm):
                 'national_id',
             ]
 
+        # Determine button text based on edit mode
+        if is_edit_mode:
+            submit_button = '<button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check-circle"></i> บันทึก</button>'
+        else:
+            submit_button = '<button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-arrow-right-circle"></i> ต่อไป: อัปโหลดรูปถ่าย</button>'
+
         layout_fields.extend([
             HTML('<h5 class="mb-3 mt-4"><i class="bi bi-briefcase"></i> ข้อมูลการทำงาน</h5>'),
             Row(
@@ -130,7 +137,7 @@ class StaffProfileForm(forms.ModelForm):
             HTML('<h5 class="mb-3 mt-4"><i class="bi bi-chat-left-text"></i> หมายเหตุ</h5>'),
             'notes',
             Div(
-                HTML('<button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-arrow-right-circle"></i> ต่อไป: อัปโหลดรูปถ่าย</button>'),
+                HTML(submit_button),
                 css_class='mt-4 d-grid'
             )
         ])

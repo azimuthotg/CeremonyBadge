@@ -48,18 +48,6 @@
                             <small class="text-muted">คำอธิบายจะแสดงในหน้ารายละเอียดบุคลากร</small>
                         </div>
 
-                        <!-- Work Dates -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">วันที่เริ่มปฏิบัติงาน</label>
-                                <input type="date" name="work_start_date" class="form-control" value="{% if zone.work_start_date %}{{ zone.work_start_date|date:'Y-m-d' }}{% endif %}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">วันที่สิ้นสุดการปฏิบัติงาน</label>
-                                <input type="date" name="work_end_date" class="form-control" value="{% if zone.work_end_date %}{{ zone.work_end_date|date:'Y-m-d' }}{% endif %}">
-                            </div>
-                        </div>
-
                         <!-- Order and Active -->
                         <div class="row mb-4">
                             <div class="col-md-6">
@@ -82,8 +70,8 @@
                             <label class="form-label">ตัวอย่างการแสดงผล</label>
                             <div class="p-3 border rounded bg-light">
                                 <strong>{{ zone.code }} - {{ zone.name }}</strong>
-                                {% if zone.work_start_date and zone.work_end_date %}
-                                <br><small class="text-muted">วันที่ปฏิบัติงาน: {{ zone.work_start_date|date:"d/m/Y" }} - {{ zone.work_end_date|date:"d/m/Y" }}</small>
+                                {% if zone.description %}
+                                <br><small class="text-muted">{{ zone.description }}</small>
                                 {% endif %}
                             </div>
                         </div>

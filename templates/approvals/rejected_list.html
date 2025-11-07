@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}รายการที่ส่งกลับแก้ไข{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-x-circle-fill text-danger"></i> รายการที่ส่งกลับแก้ไข</h2>
+            <p class="text-muted">คำขอที่ถูกส่งกลับเพื่อแก้ไข</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-danger" style="font-size: 1.2rem; padding: 10px 20px;">
+                <i class="bi bi-x-circle"></i> {{ requests.count }} รายการ
+            </span>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-10">
+                    <input type="text" name="search" class="form-control" placeholder="ค้นหาชื่อ-นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> ค้นหา
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rejected Requests Table -->
+    <div class="card">
+        <div class="card-body">
+            {% if requests %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>ตำแหน่ง</th>
+                            <th>หน่วยงาน</th>
+                            <th>ประเภทบัตร</th>
+                            <th>เหตุผล</th>
+                            <th>ตรวจสอบโดย</th>
+                            <th>ส่งกลับเมื่อ</th>
+                            <th width="120">การดำเนินการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requests %}
+                        <tr>
+                            <td>
+                                <strong>{{ req.staff_profile.full_name }}</strong>
+                            </td>
+                            <td>{{ req.staff_profile.position }}</td>
+                            <td>
+                                <small>{{ req.staff_profile.department.name }}</small>
+                            </td>
+                            <td>
+                                <span class="badge" style="background-color: {{ req.staff_profile.badge_type.color_code }};">
+                                    {{ req.staff_profile.badge_type.name }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-danger">
+                                    {{ req.rejection_reason|truncatewords:10 }}
+                                </small>
+                            </td>
+                            <td>
+                                <small>{{ req.reviewed_by.get_full_name }}</small>
+                            </td>
+                            <td>
+                                <small>{{ req.reviewed_at|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> ดูรายละเอียด
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">
+                    {% if search %}
+                        ไม่พบผลการค้นหา
+                    {% else %}
+                        ไม่มีรายการที่ส่งกลับ
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

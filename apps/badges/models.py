@@ -6,6 +6,9 @@ import hmac
 from io import BytesIO
 from django.core.files import File
 
+# Import BadgeSignatory
+from .models_signatory import BadgeSignatory
+
 # Create your models here.
 
 class BadgeType(models.Model):
@@ -107,6 +110,27 @@ class Badge(models.Model):
     is_printed = models.BooleanField(default=False, verbose_name="พิมพ์แล้ว")
     printed_count = models.IntegerField(default=0, verbose_name="จำนวนครั้งที่พิมพ์")
     is_active = models.BooleanField(default=True, verbose_name="ใช้งานได้")
+
+    # Signature fields
+    signature_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('none', 'ไม่มีลายเซ็น'),
+            ('manual', 'เซ็นต์มือจริง'),
+            ('electronic', 'ลายเซ็นต์อิเล็กทรอนิกส์'),
+        ],
+        default='none',
+        verbose_name="ประเภทลายเซ็น"
+    )
+    signatory = models.ForeignKey(
+        'BadgeSignatory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='badges',
+        verbose_name="ผู้เซ็น"
+    )
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -189,6 +213,25 @@ class PrintLog(models.Model):
     printed_at = models.DateTimeField(auto_now_add=True, verbose_name="พิมพ์เมื่อ")
     printer_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="ชื่อเครื่องพิมพ์")
     notes = models.TextField(blank=True, null=True, verbose_name="หมายเหตุ")
+
+    # Signature info
+    signature_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('manual', 'เซ็นต์มือจริง'),
+            ('electronic', 'ลายเซ็นต์อิเล็กทรอนิกส์'),
+        ],
+        default='manual',
+        verbose_name="ประเภทลายเซ็น"
+    )
+    signatory = models.ForeignKey(
+        'BadgeSignatory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='print_logs',
+        verbose_name="ผู้เซ็น"
+    )
 
     class Meta:
         db_table = 'print_logs'
