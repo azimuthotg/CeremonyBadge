@@ -14,11 +14,20 @@ NPU CeremonyBadge is a Django-based badge issuing system for Nakhon Phanom Unive
 
 ### Environment Setup
 ```bash
-# Activate virtual environment (Windows WSL)
+# 1. Activate virtual environment (Windows WSL)
 source Ceremony_env/bin/activate
 
-# Install dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
+
+# 3. Create .env file from template
+cp .env.example .env
+
+# 4. Edit .env and fill in your actual values:
+#    - SECRET_KEY (generate new one)
+#    - Database credentials (DB_NAME, DB_USER, DB_PASSWORD, DB_HOST)
+#    - ALLOWED_HOSTS (for production)
+nano .env  # or use any text editor
 ```
 
 ### Database Operations
@@ -125,9 +134,11 @@ State transitions are validated through model methods. Never bypass these valida
 - Secret key stored in SystemSetting
 - Always use `generate_qr_code()` and `verify_qr_signature()` methods
 
-**Database Credentials**: Currently hardcoded in settings.py (lines 98-102)
-- Should use python-decouple for environment variables (already in requirements.txt)
-- See DEPLOYMENT_WINDOWS.md for proper .env configuration
+**Environment Variables**: Uses python-decouple for secure configuration
+- All sensitive data stored in `.env` file (excluded from git)
+- `.env.example` provided as template
+- Required variables: SECRET_KEY, DEBUG, ALLOWED_HOSTS, DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+- See `.env.example` for setup instructions
 
 **Image Processing**: Uses Pillow + ImageKit
 - Original photos preserved in `media/photos/original/`
@@ -239,13 +250,20 @@ Use these in views/templates, not direct role string comparisons.
 See DEPLOYMENT_WINDOWS.md for complete deployment instructions.
 
 **Production Checklist**:
-1. Set DEBUG=False in environment
-2. Configure ALLOWED_HOSTS
-3. Use python-decouple for environment variables
-4. Generate new SECRET_KEY
-5. Collect static files
-6. Run with Waitress (included in requirements.txt)
-7. Setup as Windows Service via NSSM or Task Scheduler
+1. Create `.env` file from `.env.example`
+2. Generate new SECRET_KEY: `python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'`
+3. Set DEBUG=False in .env
+4. Configure ALLOWED_HOSTS with production domain/IP in .env
+5. Set database credentials in .env
+6. Collect static files: `python manage.py collectstatic`
+7. Run with Waitress (included in requirements.txt)
+8. Setup as Windows Service via NSSM or Task Scheduler
+
+**Security Notes**:
+- Never commit `.env` file to git (already in .gitignore)
+- Use strong database passwords
+- Rotate SECRET_KEY regularly
+- Keep `.env` file permissions restricted
 
 **Git Repository**: https://github.com/azimuthotg/CeremonyBadge
 
