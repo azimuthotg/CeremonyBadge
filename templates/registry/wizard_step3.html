@@ -174,13 +174,10 @@
                     <hr class="my-4">
 
                     <!-- Action Buttons -->
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i>
-                        <strong>เลือกการดำเนินการ:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li><strong>บันทึก:</strong> บันทึกข้อมูลไว้ก่อน สามารถส่งคำขอทีหลังได้</li>
-                            <li><strong>บันทึกและส่งคำขอ:</strong> ส่งเข้าระบบอนุมัติทันที</li>
-                        </ul>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i>
+                        <strong>ตรวจสอบข้อมูลเรียบร้อยแล้ว</strong>
+                        <p class="mb-0 mt-2">กดปุ่ม "ส่งคำขอ" เพื่อส่งเข้าระบบอนุมัติ หรือกลับไปแก้ไขข้อมูล</p>
                     </div>
 
                     <form method="post">
@@ -190,11 +187,11 @@
                             <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-arrow-left-circle"></i> ย้อนกลับ
                             </a>
-                            <button type="submit" name="action" value="save" class="btn btn-primary btn-lg">
-                                <i class="bi bi-save"></i> บันทึก
-                            </button>
+                            <a href="{% url 'registry:staff_list' %}" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-list-ul"></i> ไปรายการบุคลากร
+                            </a>
                             <button type="submit" name="action" value="submit" class="btn btn-success btn-lg flex-grow-1">
-                                <i class="bi bi-send-check"></i> บันทึกและส่งคำขอ
+                                <i class="bi bi-send-check"></i> ส่งคำขอ
                             </button>
                         </div>
                     </form>

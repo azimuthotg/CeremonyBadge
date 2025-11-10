@@ -6,116 +6,124 @@
 <div class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="row mb-4">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <h2><i class="bi bi-check-circle-fill text-success"></i> รายการที่อนุมัติแล้ว</h2>
             <p class="text-muted">คำขอที่ได้รับการอนุมัติ พร้อมสำหรับสร้างบัตร</p>
         </div>
-        <div class="col-md-4 text-end">
-            <span class="badge bg-success" style="font-size: 1.2rem; padding: 10px 20px;">
-                <i class="bi bi-check-circle"></i> {{ requests.count }} รายการ
-            </span>
+    </div>
+
+    <!-- Badge Type Tabs -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <ul class="nav nav-pills" id="badgeTypeTabs" role="tablist">
+                {% for data in badge_data %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if data.badge_type.id|stringformat:'s' == active_badge_id %}active{% endif %}"
+                            id="badge-{{ data.badge_type.id }}-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#badge-{{ data.badge_type.id }}"
+                            type="button"
+                            role="tab"
+                            style="background-color: {{ data.badge_type.color_code }}; border-color: {{ data.badge_type.color_code }}; color: black; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
+                        {{ data.badge_type.name }}
+                        <span class="badge bg-light text-dark ms-1">{{ data.badge_created_count }}/{{ data.total_count }}</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
     <!-- Search -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-10">
-                    <input type="text" name="search" class="form-control" placeholder="ค้นหาชื่อ-นามสกุล, ตำแหน่ง..." value="{{ search }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search"></i> ค้นหา
-                    </button>
-                </div>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" class="input-group">
+                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ, นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                <button class="btn btn-outline-primary" type="submit">
+                    <i class="bi bi-search"></i> ค้นหา
+                </button>
+                {% if search %}
+                <a href="{% url 'approvals:approved_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i> ล้าง
+                </a>
+                {% endif %}
             </form>
         </div>
     </div>
 
-    <!-- Approved Requests Table -->
-    <div class="card">
-        <div class="card-body">
-            {% if requests %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>ชื่อ-นามสกุล</th>
-                            <th>ตำแหน่ง</th>
-                            <th>หน่วยงาน</th>
-                            <th>ประเภทบัตร</th>
-                            <th>โซน</th>
-                            <th>อนุมัติโดย</th>
-                            <th>อนุมัติเมื่อ</th>
-                            <th width="120">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for req in requests %}
-                        <tr>
-                            <td>
-                                <strong>{{ req.staff_profile.full_name }}</strong>
-                            </td>
-                            <td>{{ req.staff_profile.position }}</td>
-                            <td>
-                                <small>{{ req.staff_profile.department.name }}</small>
-                            </td>
-                            <td>
-                                <span class="badge" style="background-color: {{ req.staff_profile.badge_type.color_code }};">
-                                    {{ req.staff_profile.badge_type.name }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if req.staff_profile.zone %}
-                                    <small>{{ req.staff_profile.zone.code }}</small>
-                                {% else %}
-                                    <small class="text-muted">-</small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <small>{{ req.approved_by.get_full_name }}</small>
-                            </td>
-                            <td>
-                                <small>{{ req.approved_at|date:"d/m/Y H:i" }}</small>
-                            </td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-sm btn-outline-primary" title="ดูรายละเอียด">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="{% url 'approvals:edit_approved' req.id %}" class="btn btn-sm btn-warning" title="แก้ไข">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    {% if req.staff_profile.badge %}
-                                        <a href="{% url 'badges:badge_detail' req.staff_profile.badge.id %}" class="btn btn-sm btn-success" title="ดูบัตร">
-                                            <i class="bi bi-credit-card-2-front"></i>
-                                        </a>
-                                    {% else %}
-                                        <a href="{% url 'badges:create_badge' req.id %}" class="btn btn-sm btn-primary" title="สร้างบัตร">
-                                            <i class="bi bi-plus-circle"></i> สร้างบัตร
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                <p class="text-muted mt-3">
-                    {% if search %}
-                        ไม่พบผลการค้นหา
+    <!-- Tab Content -->
+    <div class="tab-content" id="badgeTypeTabsContent">
+        {% for data in badge_data %}
+        <div class="tab-pane fade {% if data.badge_type.id|stringformat:'s' == active_badge_id %}show active{% endif %}"
+             id="badge-{{ data.badge_type.id }}"
+             role="tabpanel">
+
+            <div class="card">
+                <div class="card-body">
+                    {% if data.requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="12%">ยศ</th>
+                                    <th width="18%">ชื่อ-นามสกุล</th>
+                                    <th width="12%">บัตรประชาชน</th>
+                                    <th width="18%">ตำแหน่ง</th>
+                                    <th width="12%">ประเภทบัตร</th>
+                                    <th width="10%">สถานะ</th>
+                                    <th width="10%" class="text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in data.requests %}
+                                <tr>
+                                    <td>{{ req.staff_profile.title }}</td>
+                                    <td>
+                                        <strong>{{ req.staff_profile.first_name }} {{ req.staff_profile.last_name }}</strong>
+                                    </td>
+                                    <td class="small">{{ req.staff_profile.national_id|default:"-" }}</td>
+                                    <td>{{ req.staff_profile.position }}</td>
+                                    <td>
+                                        <span class="badge" style="background-color: {{ req.staff_profile.badge_type.color_code }};">
+                                            {{ req.staff_profile.badge_type.name }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-status {{ req.status }}">
+                                            {{ req.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-sm btn-outline-primary" title="ดูรายละเอียด">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'badges:create_badge' req.id %}" class="btn btn-sm btn-success" title="สร้างบัตร">
+                                                <i class="bi bi-credit-card"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% else %}
-                        ยังไม่มีรายการที่อนุมัติ
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                        <h5 class="mt-3">
+                            {% if search %}
+                                ไม่พบผลลัพธ์สำหรับ "{{ search }}"
+                            {% else %}
+                                ไม่มีรายการที่อนุมัติแล้ว
+                            {% endif %}
+                        </h5>
+                    </div>
                     {% endif %}
-                </p>
+                </div>
             </div>
-            {% endif %}
         </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

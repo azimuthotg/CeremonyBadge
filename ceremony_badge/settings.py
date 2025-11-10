@@ -83,6 +83,7 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'django.template.context_processors.static',
                 'apps.approvals.context_processors.approval_counts',
+                'apps.registry.context_processors.validation_error',
             ],
         },
     },

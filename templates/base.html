@@ -234,6 +234,46 @@
                 </div>
             </div>
 
+            <!-- Validation Error Modal (Global) -->
+            {% if validation_error %}
+            <div class="modal fade" id="validationErrorModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-exclamation-triangle-fill"></i> {{ validation_error.title }}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-x-circle"></i>
+                                <strong>{{ validation_error.message }}</strong>
+                            </div>
+
+                            {% if validation_error.details %}
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>คำแนะนำ:</strong>
+                                <div class="mt-2">{{ validation_error.details|safe }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i> ปิด
+                            </button>
+                            {% if validation_error.action_url %}
+                            <a href="{{ validation_error.action_url }}" class="btn btn-primary">
+                                <i class="bi bi-pencil"></i> {{ validation_error.action_text|default:"แก้ไข" }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Footer -->
             <footer class="footer">
                 <div class="container-fluid px-4">
@@ -278,6 +318,14 @@
                 }
             }
         });
+
+        // Show validation error modal if exists
+        {% if validation_error %}
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = new bootstrap.Modal(document.getElementById('validationErrorModal'));
+            modal.show();
+        });
+        {% endif %}
     </script>
 
     {% block extra_js %}{% endblock %}

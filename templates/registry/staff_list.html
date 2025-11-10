@@ -10,9 +10,34 @@
             <h2><i class="bi bi-people-fill"></i> รายการบุคลากร</h2>
         </div>
         <div class="col-md-6 text-end">
+            <a href="{% url 'registry:staff_import_upload' %}" class="btn btn-success me-2">
+                <i class="bi bi-file-earmark-excel"></i> นำเข้าจาก Excel
+            </a>
             <a href="{% url 'registry:wizard_step1' %}" class="btn btn-primary">
                 <i class="bi bi-person-plus-fill"></i> ลงทะเบียนบุคลากรใหม่
             </a>
+        </div>
+    </div>
+
+    <!-- Badge Type Tabs -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <ul class="nav nav-pills" id="badgeTypeTabs" role="tablist">
+                {% for data in badge_data %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if data.badge_type.id|stringformat:'s' == active_badge_id %}active{% endif %}"
+                            id="badge-{{ data.badge_type.id }}-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#badge-{{ data.badge_type.id }}"
+                            type="button"
+                            role="tab"
+                            style="background-color: {{ data.badge_type.color_code }}; border-color: {{ data.badge_type.color_code }}; color: black; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
+                        {{ data.badge_type.name }}
+                        <span class="badge bg-light text-dark ms-1">{{ data.submitted_count }}/{{ data.total_count }}</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
@@ -49,40 +74,47 @@
         </div>
     </div>
 
-    <!-- Staff List -->
-    <div class="row">
-        <div class="col-12">
+    <!-- Tab Content -->
+    <div class="tab-content" id="badgeTypeTabsContent">
+        {% for data in badge_data %}
+        <div class="tab-pane fade {% if data.badge_type.id|stringformat:'s' == active_badge_id %}show active{% endif %}"
+             id="badge-{{ data.badge_type.id }}"
+             role="tabpanel">
+
             <div class="card">
                 <div class="card-body">
-                    {% if staff_profiles %}
+                    {% if data.staff_profiles %}
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th width="50">
-                                        <input type="checkbox" class="form-check-input" id="select-all">
+                                    <th width="30">
+                                        <input type="checkbox" class="form-check-input select-all-badge" data-badge-id="{{ data.badge_type.id }}">
                                     </th>
-                                    <th width="25%">ชื่อ-นามสกุล</th>
-                                    <th width="20%">ตำแหน่ง</th>
-                                    <th width="15%">ประเภทบัตร</th>
-                                    <th width="15%">สถานะ</th>
-                                    <th width="10%">เพิ่มเมื่อ</th>
+                                    <th width="12%">ยศ</th>
+                                    <th width="18%">ชื่อ-นามสกุล</th>
+                                    <th width="12%">บัตรประชาชน</th>
+                                    <th width="18%">ตำแหน่ง</th>
+                                    <th width="12%">ประเภทบัตร</th>
+                                    <th width="10%">สถานะ</th>
                                     <th width="10%" class="text-center">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for staff in staff_profiles %}
+                                {% for staff in data.staff_profiles %}
                                 <tr>
                                     <td>
                                         {% if not staff.badge_request %}
-                                        <input type="checkbox" class="form-check-input staff-checkbox" value="{{ staff.id }}">
+                                        <input type="checkbox" class="form-check-input staff-checkbox" data-badge-id="{{ data.badge_type.id }}" value="{{ staff.id }}">
                                         {% elif staff.badge_request.status == 'draft' or staff.badge_request.status == 'photo_uploaded' or staff.badge_request.status == 'ready_to_submit' or staff.badge_request.status == 'rejected' %}
-                                        <input type="checkbox" class="form-check-input staff-checkbox" value="{{ staff.id }}">
+                                        <input type="checkbox" class="form-check-input staff-checkbox" data-badge-id="{{ data.badge_type.id }}" value="{{ staff.id }}">
                                         {% endif %}
                                     </td>
+                                    <td>{{ staff.title }}</td>
                                     <td>
-                                        <strong>{{ staff.get_title_display }} {{ staff.first_name }} {{ staff.last_name }}</strong>
+                                        <strong>{{ staff.first_name }} {{ staff.last_name }}</strong>
                                     </td>
+                                    <td class="small">{{ staff.national_id|default:"-" }}</td>
                                     <td>{{ staff.position }}</td>
                                     <td>
                                         <span class="badge" style="background-color: {{ staff.badge_type.color_code }};">
@@ -97,9 +129,6 @@
                                         {% else %}
                                             <span class="badge-status draft">ยังไม่สร้างคำขอ</span>
                                         {% endif %}
-                                    </td>
-                                    <td>
-                                        <small>{{ staff.created_at|date:"d/m/Y" }}</small>
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm" role="group">
@@ -153,6 +182,7 @@
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
 </div>
 
@@ -184,28 +214,95 @@
     </div>
 </div>
 
+<!-- Bulk Submit Error Modal -->
+{% if bulk_submit_errors %}
+<div class="modal fade" id="bulkSubmitErrorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark">
+                    <i class="bi bi-exclamation-triangle-fill"></i> ไม่สามารถส่งคำขอได้
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if bulk_submit_errors.success_count > 0 %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>ส่งสำเร็จ:</strong> {{ bulk_submit_errors.success_count }} รายการ
+                </div>
+                {% endif %}
+
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle"></i>
+                    <strong>พบปัญหา:</strong> {{ bulk_submit_errors.error_count }} รายการ
+                </div>
+
+                <h6 class="mb-3"><i class="bi bi-list-ul"></i> รายการที่มีปัญหา:</h6>
+                <div class="list-group mb-3" style="max-height: 400px; overflow-y: auto;">
+                    {% for error in bulk_submit_errors.error_messages %}
+                    <div class="list-group-item">
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-danger me-2">{{ forloop.counter }}</span>
+                            <div class="flex-grow-1">
+                                {{ error }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>คำแนะนำ:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li><strong>ยังไม่มีรูปถ่าย:</strong> กรุณาคลิกปุ่ม <i class="bi bi-pencil"></i> แก้ไข → ไปที่ขั้นตอนที่ 2 "อัปโหลดรูปถ่าย" → อัปโหลดและครอปรูปให้เรียบร้อย</li>
+                        <li><strong>ยังไม่ระบุพื้นที่/โซน:</strong> กรุณาคลิกปุ่ม <i class="bi bi-pencil"></i> แก้ไข → ไปที่ขั้นตอนที่ 1 "ข้อมูลบุคลากร" → เลือกพื้นที่/โซนให้เรียบร้อย</li>
+                        <li><strong>สถานะไม่เหมาะสม:</strong> รายการนี้อยู่ระหว่างดำเนินการแล้ว ไม่สามารถส่งซ้ำได้</li>
+                        <li>หลังจากแก้ไขเรียบร้อย สามารถส่งคำขอได้อีกครั้ง</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const selectAll = document.getElementById('select-all');
-    const checkboxes = document.querySelectorAll('.staff-checkbox');
+    // Show error modal if exists
+    {% if bulk_submit_errors %}
+    const errorModal = new bootstrap.Modal(document.getElementById('bulkSubmitErrorModal'));
+    errorModal.show();
+    {% endif %}
+
     const bulkActionsBar = document.getElementById('bulk-actions-bar');
     const selectedCount = document.getElementById('selected-count');
     const bulkSubmitBtn = document.getElementById('bulk-submit-btn');
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="pill"]');
 
-    // Select all functionality
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            checkboxes.forEach(cb => cb.checked = this.checked);
-            updateBulkActions();
-        });
+    // Function to get active tab's checkboxes
+    function getActiveTabCheckboxes() {
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (!activeTab) return [];
+        return activeTab.querySelectorAll('.staff-checkbox');
     }
 
-    // Individual checkbox change
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', updateBulkActions);
-    });
+    // Function to get active tab's select-all checkbox
+    function getActiveTabSelectAll() {
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (!activeTab) return null;
+        return activeTab.querySelector('.select-all-badge');
+    }
 
+    // Update bulk actions bar
     function updateBulkActions() {
+        const checkboxes = getActiveTabCheckboxes();
         const selected = Array.from(checkboxes).filter(cb => cb.checked);
         const count = selected.length;
 
@@ -217,15 +314,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Update select all checkbox state
+        const selectAll = getActiveTabSelectAll();
         if (selectAll) {
             selectAll.checked = count === checkboxes.length && count > 0;
             selectAll.indeterminate = count > 0 && count < checkboxes.length;
         }
     }
 
+    // Setup select-all functionality for all tabs
+    function setupSelectAll() {
+        const allSelectAllCheckboxes = document.querySelectorAll('.select-all-badge');
+        allSelectAllCheckboxes.forEach(selectAll => {
+            selectAll.addEventListener('change', function() {
+                const badgeId = this.getAttribute('data-badge-id');
+                const tabCheckboxes = document.querySelectorAll(`.staff-checkbox[data-badge-id="${badgeId}"]`);
+                tabCheckboxes.forEach(cb => cb.checked = this.checked);
+                updateBulkActions();
+            });
+        });
+    }
+
+    // Setup individual checkbox change handlers
+    function setupCheckboxes() {
+        const allCheckboxes = document.querySelectorAll('.staff-checkbox');
+        allCheckboxes.forEach(cb => {
+            cb.addEventListener('change', updateBulkActions);
+        });
+    }
+
+    // Handle tab change
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', function() {
+            updateBulkActions();
+        });
+    });
+
     // Bulk submit
     if (bulkSubmitBtn) {
         bulkSubmitBtn.addEventListener('click', function() {
+            const checkboxes = getActiveTabCheckboxes();
             const selected = Array.from(checkboxes).filter(cb => cb.checked);
             document.getElementById('bulk-submit-count').textContent = selected.length;
 
@@ -245,6 +372,11 @@ document.addEventListener('DOMContentLoaded', function() {
             new bootstrap.Modal(document.getElementById('bulkSubmitModal')).show();
         });
     }
+
+    // Initialize
+    setupSelectAll();
+    setupCheckboxes();
+    updateBulkActions();
 });
 </script>
 {% endblock %}

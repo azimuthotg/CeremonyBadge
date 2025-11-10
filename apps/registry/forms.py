@@ -249,3 +249,102 @@ class BadgeRequestReviewForm(forms.Form):
                 css_class='d-grid gap-2 d-md-flex justify-content-md-end'
             )
         )
+
+
+class ExcelImportForm(forms.Form):
+    """ฟอร์มอัปโหลดไฟล์ Excel สำหรับ import ข้อมูลบุคลากร"""
+
+    excel_file = forms.FileField(
+        label='เลือกไฟล์ Excel',
+        help_text='รองรับไฟล์ .xlsx เท่านั้น',
+        widget=forms.FileInput(attrs={
+            'accept': '.xlsx',
+            'class': 'form-control'
+        })
+    )
+
+    badge_type = forms.ModelChoiceField(
+        queryset=None,  # จะ set ใน __init__
+        label='ประเภทบัตร',
+        help_text='เลือกประเภทบัตรที่ต้องการนำเข้า',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    zone = forms.ModelChoiceField(
+        queryset=None,  # จะ set ใน __init__
+        label='พื้นที่/โซน',
+        help_text='เลือกโซนที่ปฏิบัติงาน (หรือเลือก "ไม่เลือก" เพื่ออัพเดตทีหลัง)',
+        required=False,  # ทำให้ไม่บังคับเลือก
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Import models ที่นี่เพื่อหลีกเลี่ยง circular import
+        from apps.badges.models import BadgeType
+        from apps.registry.models import Zone
+        from django.db.models import Case, When, IntegerField
+
+        # Set queryset สำหรับ dropdown
+        # เรียงลำดับประเภทบัตร: ชมพู → แดง → เหลือง → เขียว
+        badge_order = Case(
+            When(name='บัตรชมพู', then=1),
+            When(name='บัตรแดง', then=2),
+            When(name='บัตรเหลือง', then=3),
+            When(name='บัตรเขียว', then=4),
+            default=5,
+            output_field=IntegerField(),
+        )
+        self.fields['badge_type'].queryset = BadgeType.objects.filter(is_active=True).order_by(badge_order)
+        self.fields['zone'].queryset = Zone.objects.filter(is_active=True)
+
+        # Setup crispy forms helper
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_enctype = 'multipart/form-data'
+        self.helper.layout = Layout(
+            HTML('''
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>คำแนะนำ:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>ไฟล์ต้องเป็น Excel (.xlsx) เท่านั้น</li>
+                        <li>ข้อมูลจะเริ่มอ่านจากแถวที่ 5 (ข้ามหัวข้อ 4 แถว)</li>
+                        <li>ระบบจะตรวจสอบข้อมูลซ้ำโดยใช้บัตรประชาชน 13 หลัก</li>
+                        <li>รูปภาพสามารถแนบภายหลังได้ หลังจาก import สำเร็จ</li>
+                    </ul>
+                </div>
+            '''),
+            'excel_file',
+            Row(
+                Column('badge_type', css_class='col-md-6'),
+                Column('zone', css_class='col-md-6'),
+            ),
+            Div(
+                HTML('''
+                    <a href="{% url 'registry:staff_list' %}" class="btn btn-outline-secondary btn-lg me-2">
+                        <i class="bi bi-arrow-left-circle"></i> ยกเลิก
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-file-earmark-excel"></i> ถัดไป: ตรวจสอบข้อมูล
+                    </button>
+                '''),
+                css_class='d-grid gap-2 d-md-flex justify-content-md-end mt-4'
+            )
+        )
+
+    def clean_excel_file(self):
+        """ตรวจสอบไฟล์ Excel"""
+        excel_file = self.cleaned_data.get('excel_file')
+
+        if excel_file:
+            # ตรวจสอบนามสกุลไฟล์
+            if not excel_file.name.endswith('.xlsx'):
+                raise forms.ValidationError('กรุณาอัปโหลดไฟล์ Excel (.xlsx) เท่านั้น')
+
+            # ตรวจสอบขนาดไฟล์ (ไม่เกิน 10MB)
+            if excel_file.size > 10 * 1024 * 1024:
+                raise forms.ValidationError('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 10MB)')
+
+        return excel_file

@@ -33,58 +33,82 @@ def get_client_ip(request):
 @officer_required
 def pending_list(request):
     """หน้ารอตรวจสอบ - รายการที่ส่งมาแล้ว"""
-    # Get pending requests (status = submitted)
-    requests = BadgeRequest.objects.filter(
-        status='submitted'
+    # Get all requests (status = submitted, under_review)
+    base_queryset = BadgeRequest.objects.filter(
+        status__in=['submitted', 'under_review']
     ).select_related(
         'staff_profile__department',
         'staff_profile__badge_type',
         'staff_profile__zone',
         'created_by'
-    ).order_by('submitted_at')
+    )
 
     # Search
     search = request.GET.get('search', '')
     if search:
-        requests = requests.filter(
+        base_queryset = base_queryset.filter(
             Q(staff_profile__first_name__icontains=search) |
             Q(staff_profile__last_name__icontains=search) |
-            Q(staff_profile__position__icontains=search)
+            Q(staff_profile__position__icontains=search) |
+            Q(staff_profile__national_id__icontains=search)
         )
 
-    # Filter by department
-    department_id = request.GET.get('department')
-    if department_id:
-        requests = requests.filter(staff_profile__department_id=department_id)
-
-    # Filter by badge type
-    badge_type_id = request.GET.get('badge_type')
-    if badge_type_id:
-        requests = requests.filter(staff_profile__badge_type_id=badge_type_id)
-
-    # Filter by zone
-    zone_id = request.GET.get('zone')
-    if zone_id:
-        requests = requests.filter(staff_profile__zone_id=zone_id)
-
-    # Get filter options
-    from apps.accounts.models import Department
+    # Get all badge types (เรียงตามลำดับ: ชมพู แดง เหลือง เขียว)
     from apps.badges.models import BadgeType
-    from apps.registry.models import Zone
+    from django.db.models import Case, When, IntegerField
 
-    departments = Department.objects.filter(is_active=True).order_by('name')
-    badge_types = BadgeType.objects.filter(is_active=True).order_by('name')
-    zones = Zone.objects.filter(is_active=True).order_by('code')
+    badge_order = Case(
+        When(name='บัตรชมพู', then=1),
+        When(name='บัตรแดง', then=2),
+        When(name='บัตรเหลือง', then=3),
+        When(name='บัตรเขียว', then=4),
+        default=5,
+        output_field=IntegerField(),
+    )
+    badge_types = BadgeType.objects.filter(is_active=True).order_by(badge_order)
+
+    # แยกข้อมูลตามประเภทบัตร
+    badge_data = []
+    for badge_type in badge_types:
+        # ดึงทั้งหมดที่ส่งมาแล้ว (submitted + under_review + approved)
+        all_submitted = BadgeRequest.objects.filter(
+            staff_profile__badge_type=badge_type,
+            status__in=['submitted', 'under_review', 'approved']
+        ).select_related('staff_profile__department', 'staff_profile__zone', 'created_by')
+
+        if search:
+            all_submitted = all_submitted.filter(
+                Q(staff_profile__first_name__icontains=search) |
+                Q(staff_profile__last_name__icontains=search) |
+                Q(staff_profile__position__icontains=search) |
+                Q(staff_profile__national_id__icontains=search)
+            )
+
+        # กรองเฉพาะที่รอตรวจสอบ (submitted, under_review)
+        pending_requests = all_submitted.filter(
+            status__in=['submitted', 'under_review']
+        ).order_by('submitted_at')
+
+        # นับจำนวนที่อนุมัติแล้ว
+        approved_count = all_submitted.filter(status='approved').count()
+        total_count = all_submitted.count()
+
+        badge_data.append({
+            'badge_type': badge_type,
+            'requests': pending_requests,
+            'approved_count': approved_count,
+            'total_count': total_count,
+        })
+
+    # Tab ที่เลือก (default = บัตรแรก)
+    active_badge_id = request.GET.get('badge', '')
+    if not active_badge_id and badge_types.exists():
+        active_badge_id = str(badge_types.first().id)
 
     context = {
-        'requests': requests,
+        'badge_data': badge_data,
+        'active_badge_id': active_badge_id,
         'search': search,
-        'departments': departments,
-        'badge_types': badge_types,
-        'zones': zones,
-        'selected_department': department_id,
-        'selected_badge_type': badge_type_id,
-        'selected_zone': zone_id,
     }
 
     return render(request, 'approvals/pending_list.html', context)
@@ -214,26 +238,64 @@ def reject_request(request, request_id):
 @officer_required
 def approved_list(request):
     """หน้ารายการที่อนุมัติแล้ว"""
-    requests = BadgeRequest.objects.filter(
-        status='approved'
-    ).select_related(
-        'staff_profile__department',
-        'staff_profile__badge_type',
-        'staff_profile__zone',
-        'approved_by'
-    ).order_by('-approved_at')
-
-    # Search and filters (same as pending_list)
+    # Search
     search = request.GET.get('search', '')
-    if search:
-        requests = requests.filter(
-            Q(staff_profile__first_name__icontains=search) |
-            Q(staff_profile__last_name__icontains=search) |
-            Q(staff_profile__position__icontains=search)
-        )
+
+    # Get all badge types (เรียงตามลำดับ: ชมพู แดง เหลือง เขียว)
+    from apps.badges.models import BadgeType
+    from django.db.models import Case, When, IntegerField
+
+    badge_order = Case(
+        When(name='บัตรชมพู', then=1),
+        When(name='บัตรแดง', then=2),
+        When(name='บัตรเหลือง', then=3),
+        When(name='บัตรเขียว', then=4),
+        default=5,
+        output_field=IntegerField(),
+    )
+    badge_types = BadgeType.objects.filter(is_active=True).order_by(badge_order)
+
+    # แยกข้อมูลตามประเภทบัตร
+    badge_data = []
+    for badge_type in badge_types:
+        # ดึงทั้งหมดที่อนุมัติแล้ว (approved + badge_created + printed + completed)
+        all_approved = BadgeRequest.objects.filter(
+            staff_profile__badge_type=badge_type,
+            status__in=['approved', 'badge_created', 'printed', 'completed']
+        ).select_related('staff_profile__department', 'staff_profile__zone', 'approved_by')
+
+        if search:
+            all_approved = all_approved.filter(
+                Q(staff_profile__first_name__icontains=search) |
+                Q(staff_profile__last_name__icontains=search) |
+                Q(staff_profile__position__icontains=search) |
+                Q(staff_profile__national_id__icontains=search)
+            )
+
+        # แสดงเฉพาะที่ยังเป็น approved (ยังไม่สร้างบัตร)
+        pending_badge_creation = all_approved.filter(status='approved').order_by('-approved_at')
+
+        # นับจำนวนที่สร้างบัตรแล้ว (badge_created, printed, completed)
+        badge_created_count = all_approved.filter(
+            status__in=['badge_created', 'printed', 'completed']
+        ).count()
+        total_count = all_approved.count()
+
+        badge_data.append({
+            'badge_type': badge_type,
+            'requests': pending_badge_creation,
+            'badge_created_count': badge_created_count,
+            'total_count': total_count,
+        })
+
+    # Tab ที่เลือก (default = บัตรแรก)
+    active_badge_id = request.GET.get('badge', '')
+    if not active_badge_id and badge_types.exists():
+        active_badge_id = str(badge_types.first().id)
 
     context = {
-        'requests': requests,
+        'badge_data': badge_data,
+        'active_badge_id': active_badge_id,
         'search': search,
     }
 

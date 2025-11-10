@@ -76,6 +76,13 @@ class StaffProfile(models.Model):
     )
 
     # ข้อมูลการทำงาน
+    person_type = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="ประเภทบุคคล",
+        help_text="เช่น บุคคลชั้นในสุด, บุคคลชั้นใน, บุคคลทั่วไป ฯลฯ"
+    )
     position = models.CharField(max_length=255, verbose_name="ตำแหน่ง/หน้าที่")
     badge_type = models.ForeignKey(
         'badges.BadgeType',

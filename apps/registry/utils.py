@@ -143,3 +143,85 @@ def format_thai_date_range(start_date, end_date, short=False):
     elif end_str:
         return end_str
     return ''
+
+
+def parse_excel_staff(file_path):
+    """
+    Parse Excel file สำหรับ import ข้อมูลบุคลากร
+
+    โครงสร้างไฟล์ Excel:
+    - Row 1: หัวข้อหลัก (บัญชีรายชื่อเจ้าหน้าที่...)
+    - Row 2: พื้นที่ (เช่น I, II, III)
+    - Row 3: หัวคอลัมน์หลัก
+    - Row 4: หัวคอลัมน์ย่อย (เข็ม 1, 2, 3, 4, RT-PCR, ATK, วัดอุณหภูมิ)
+    - Row 5+: ข้อมูลจริง
+
+    คอลัมน์ตามลำดับ:
+    A: ลำดับ
+    B: ยศ
+    C: ชื่อ
+    D: นามสกุล
+    E: บัตรประชาชน 13 หลัก
+    F: หน่วยงาน
+    G: ประเภทบุคคล
+    H: หน้าที่
+    I: อายุ
+    J: วัคซีนเข็ม 1
+    K: วัคซีนเข็ม 2
+    L: วัคซีนเข็ม 3
+    M: วัคซีนเข็ม 4
+    N: RT-PCR
+    O: ATK
+    P: วัดอุณหภูมิ
+    Q: รูปภาพ (สำหรับชมพู/แดง - ว่างไว้) หรือ หมายเหตุ (สำหรับเหลือง/เขียว)
+
+    Args:
+        file_path (str): ที่อยู่ไฟล์ Excel
+
+    Returns:
+        list: รายการข้อมูลบุคลากรที่ parse แล้ว
+    """
+    import openpyxl
+
+    wb = openpyxl.load_workbook(file_path)
+    ws = wb.active
+
+    # ข้ามแถวหัวข้อ (rows 1-4) เริ่มอ่านจาก row 5
+    data_list = []
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=5, values_only=True), start=5):
+        # ถ้าแถวว่างเปล่า (ลำดับเป็น None) ให้ข้ามไป
+        if row[0] is None:
+            continue
+
+        # แยกข้อมูลตามคอลัมน์
+        staff_data = {
+            'row_number': row_num,  # เก็บหมายเลขแถวไว้สำหรับอ้างอิง
+            'order': row[0],  # A: ลำดับ
+            'title': str(row[1] or '').strip(),  # B: ยศ
+            'first_name': str(row[2] or '').strip(),  # C: ชื่อ
+            'last_name': str(row[3] or '').strip(),  # D: นามสกุล
+            'national_id': str(row[4]).strip() if row[4] else '',  # E: บัตรประชาชน
+            'department_name': str(row[5] or '').strip(),  # F: หน่วยงาน
+            'person_type': str(row[6] or '').strip(),  # G: ประเภทบุคคล
+            'position': str(row[7] or '').strip(),  # H: หน้าที่
+            'age': int(row[8]) if row[8] and str(row[8]).strip() else None,  # I: อายุ
+
+            # การรับวัคซีน (1 = True, None/0 = False)
+            'vaccine_dose_1': bool(row[9] == 1),  # J: เข็ม 1
+            'vaccine_dose_2': bool(row[10] == 1),  # K: เข็ม 2
+            'vaccine_dose_3': bool(row[11] == 1),  # L: เข็ม 3
+            'vaccine_dose_4': bool(row[12] == 1),  # M: เข็ม 4
+
+            # การตรวจโควิดก่อนการปฏิบัติงาน (1 = True, None/0 = False)
+            'test_rt_pcr': bool(row[13] == 1),  # N: RT-PCR
+            'test_atk': bool(row[14] == 1),  # O: ATK
+            'test_temperature': bool(row[15] == 1),  # P: วัดอุณหภูมิ
+
+            # Q: รูปภาพ (สำหรับชมพู/แดง) หรือ หมายเหตุ (สำหรับเหลือง/เขียว)
+            'notes': str(row[16] or '').strip() if len(row) > 16 else '',
+        }
+
+        data_list.append(staff_data)
+
+    return data_list

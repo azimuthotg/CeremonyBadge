@@ -34,4 +34,10 @@ urlpatterns = [
 
     # Work Dates Management
     path('settings/work-dates/', views.work_dates_settings, name='work_dates_settings'),
+
+    # Excel Import
+    path('import/upload/', views.staff_import_upload, name='staff_import_upload'),
+    path('import/preview/', views.staff_import_preview, name='staff_import_preview'),
+    path('import/confirm/', views.staff_import_confirm, name='staff_import_confirm'),
+    path('import/success/', views.staff_import_success, name='staff_import_success'),
 ]

@@ -7,301 +7,119 @@
 <div class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="row mb-4">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <h2><i class="bi bi-hourglass-split"></i> รอตรวจสอบ</h2>
             <p class="text-muted">รายการที่ส่งมาแล้ว รอการตรวจสอบและอนุมัติ</p>
         </div>
-        <div class="col-md-4 text-end">
-            <span class="badge bg-warning text-dark" style="font-size: 1.2rem; padding: 10px 20px;">
-                <i class="bi bi-list-check"></i> {{ requests.count }} รายการ
-            </span>
+    </div>
+
+    <!-- Badge Type Tabs -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <ul class="nav nav-pills" id="badgeTypeTabs" role="tablist">
+                {% for data in badge_data %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if data.badge_type.id|stringformat:'s' == active_badge_id %}active{% endif %}"
+                            id="badge-{{ data.badge_type.id }}-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#badge-{{ data.badge_type.id }}"
+                            type="button"
+                            role="tab"
+                            style="background-color: {{ data.badge_type.color_code }}; border-color: {{ data.badge_type.color_code }}; color: black; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
+                        {{ data.badge_type.name }}
+                        <span class="badge bg-light text-dark ms-1">{{ data.approved_count }}/{{ data.total_count }}</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="get" id="filter-form">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label"><i class="bi bi-search"></i> ค้นหา</label>
-                        <input type="text" name="search" class="form-control" placeholder="ชื่อ-นามสกุล, ตำแหน่ง" value="{{ search }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label"><i class="bi bi-building"></i> หน่วยงาน</label>
-                        <select name="department" class="form-select">
-                            <option value="">ทั้งหมด</option>
-                            {% for dept in departments %}
-                            <option value="{{ dept.id }}" {% if selected_department == dept.id|stringformat:"s" %}selected{% endif %}>
-                                {{ dept.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label"><i class="bi bi-credit-card"></i> ประเภทบัตร</label>
-                        <select name="badge_type" class="form-select">
-                            <option value="">ทั้งหมด</option>
-                            {% for badge_type in badge_types %}
-                            <option value="{{ badge_type.id }}" {% if selected_badge_type == badge_type.id|stringformat:"s" %}selected{% endif %}>
-                                {{ badge_type.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label"><i class="bi bi-geo-alt"></i> โซน</label>
-                        <select name="zone" class="form-select">
-                            <option value="">ทั้งหมด</option>
-                            {% for zone in zones %}
-                            <option value="{{ zone.id }}" {% if selected_zone == zone.id|stringformat:"s" %}selected{% endif %}>
-                                {{ zone.code }} - {{ zone.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-funnel"></i> กรอง
-                        </button>
-                        <a href="{% url 'approvals:pending_list' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> ล้างตัวกรอง
-                        </a>
-                    </div>
-                </div>
+    <!-- Search -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" class="input-group">
+                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ, นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                <button class="btn btn-outline-primary" type="submit">
+                    <i class="bi bi-search"></i> ค้นหา
+                </button>
+                {% if search %}
+                <a href="{% url 'approvals:pending_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i> ล้าง
+                </a>
+                {% endif %}
             </form>
         </div>
     </div>
 
-    <!-- Bulk Actions Bar -->
-    <div class="card mb-3" id="bulk-actions-bar" style="display: none;">
-        <div class="card-body bg-light">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <span id="selected-count" class="fw-bold">0</span> รายการที่เลือก
-                </div>
-                <div class="col-md-6 text-end">
-                    <button type="button" class="btn btn-success me-2" id="bulk-approve-btn">
-                        <i class="bi bi-check-circle"></i> อนุมัติที่เลือก
-                    </button>
-                    <button type="button" class="btn btn-danger" id="bulk-reject-btn">
-                        <i class="bi bi-x-circle"></i> ส่งกลับที่เลือก
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Tab Content -->
+    <div class="tab-content" id="badgeTypeTabsContent">
+        {% for data in badge_data %}
+        <div class="tab-pane fade {% if data.badge_type.id|stringformat:'s' == active_badge_id %}show active{% endif %}"
+             id="badge-{{ data.badge_type.id }}"
+             role="tabpanel">
 
-    <!-- Requests Table -->
-    <div class="card">
-        <div class="card-body">
-            {% if requests %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th width="50">
-                                <input type="checkbox" class="form-check-input" id="select-all">
-                            </th>
-                            <th>ชื่อ-นามสกุล</th>
-                            <th>ตำแหน่ง</th>
-                            <th>หน่วยงาน</th>
-                            <th>ประเภทบัตร</th>
-                            <th>โซน</th>
-                            <th>ส่งโดย</th>
-                            <th>ส่งเมื่อ</th>
-                            <th width="120">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for req in requests %}
-                        <tr>
-                            <td>
-                                <input type="checkbox" class="form-check-input request-checkbox" value="{{ req.id }}">
-                            </td>
-                            <td>
-                                <strong>{{ req.staff_profile.full_name }}</strong>
-                            </td>
-                            <td>{{ req.staff_profile.position }}</td>
-                            <td>
-                                <small>{{ req.staff_profile.department.name }}</small>
-                            </td>
-                            <td>
-                                <span class="badge" style="background-color: {{ req.staff_profile.badge_type.color_code }};">
-                                    {{ req.staff_profile.badge_type.name }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if req.staff_profile.zone %}
-                                    <small>{{ req.staff_profile.zone.code }}</small>
-                                {% else %}
-                                    <small class="text-muted">-</small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <small>{{ req.created_by.get_full_name }}</small>
-                            </td>
-                            <td>
-                                <small>{{ req.submitted_at|thai_datetime:"short" }}</small>
-                            </td>
-                            <td>
-                                <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-eye"></i> ตรวจสอบ
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card">
+                <div class="card-body">
+                    {% if data.requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="12%">ยศ</th>
+                                    <th width="18%">ชื่อ-นามสกุล</th>
+                                    <th width="12%">บัตรประชาชน</th>
+                                    <th width="18%">ตำแหน่ง</th>
+                                    <th width="12%">ประเภทบัตร</th>
+                                    <th width="10%">สถานะ</th>
+                                    <th width="10%" class="text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in data.requests %}
+                                <tr>
+                                    <td>{{ req.staff_profile.title }}</td>
+                                    <td>
+                                        <strong>{{ req.staff_profile.first_name }} {{ req.staff_profile.last_name }}</strong>
+                                    </td>
+                                    <td class="small">{{ req.staff_profile.national_id|default:"-" }}</td>
+                                    <td>{{ req.staff_profile.position }}</td>
+                                    <td>
+                                        <span class="badge" style="background-color: {{ req.staff_profile.badge_type.color_code }};">
+                                            {{ req.staff_profile.badge_type.name }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-status {{ req.status }}">
+                                            {{ req.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-sm btn-primary" title="ตรวจสอบ">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                        <h5 class="mt-3">
+                            {% if search %}
+                                ไม่พบผลลัพธ์สำหรับ "{{ search }}"
+                            {% else %}
+                                ไม่มีรายการรอตรวจสอบ
+                            {% endif %}
+                        </h5>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <div class="text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                <p class="text-muted mt-3">ไม่มีรายการรอตรวจสอบ</p>
-            </div>
-            {% endif %}
         </div>
+        {% endfor %}
     </div>
 </div>
-
-<!-- Bulk Reject Modal -->
-<div class="modal fade" id="bulkRejectModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-x-circle"></i> ส่งกลับรายการที่เลือก</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" id="bulk-reject-form" action="{% url 'approvals:bulk_reject' %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        คุณกำลังส่งกลับ <strong><span id="bulk-reject-count">0</span></strong> รายการ
-                    </div>
-                    <div class="mb-3">
-                        <label for="bulk-rejection-reason" class="form-label">เหตุผลในการส่งกลับ <span class="text-danger">*</span></label>
-                        <textarea name="rejection_reason" id="bulk-rejection-reason" class="form-control" rows="4" required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-x-circle"></i> ยืนยันส่งกลับ
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Bulk Approve Confirmation Modal -->
-<div class="modal fade" id="bulkApproveModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-check-circle"></i> อนุมัติรายการที่เลือก</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" id="bulk-approve-form" action="{% url 'approvals:bulk_approve' %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="alert alert-success">
-                        <i class="bi bi-info-circle"></i>
-                        คุณกำลังอนุมัติ <strong><span id="bulk-approve-count">0</span></strong> รายการ
-                    </div>
-                    <p>คุณต้องการดำเนินการต่อหรือไม่?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-circle"></i> ยืนยันอนุมัติ
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const selectAll = document.getElementById('select-all');
-    const checkboxes = document.querySelectorAll('.request-checkbox');
-    const bulkActionsBar = document.getElementById('bulk-actions-bar');
-    const selectedCount = document.getElementById('selected-count');
-    const bulkApproveBtn = document.getElementById('bulk-approve-btn');
-    const bulkRejectBtn = document.getElementById('bulk-reject-btn');
-
-    // Select all functionality
-    selectAll.addEventListener('change', function() {
-        checkboxes.forEach(cb => cb.checked = this.checked);
-        updateBulkActions();
-    });
-
-    // Individual checkbox change
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', updateBulkActions);
-    });
-
-    function updateBulkActions() {
-        const selected = Array.from(checkboxes).filter(cb => cb.checked);
-        const count = selected.length;
-
-        if (count > 0) {
-            bulkActionsBar.style.display = 'block';
-            selectedCount.textContent = count;
-        } else {
-            bulkActionsBar.style.display = 'none';
-        }
-
-        // Update select all checkbox state
-        selectAll.checked = count === checkboxes.length && count > 0;
-        selectAll.indeterminate = count > 0 && count < checkboxes.length;
-    }
-
-    // Bulk approve
-    bulkApproveBtn.addEventListener('click', function() {
-        const selected = Array.from(checkboxes).filter(cb => cb.checked);
-        document.getElementById('bulk-approve-count').textContent = selected.length;
-
-        const form = document.getElementById('bulk-approve-form');
-        // Clear previous hidden inputs
-        form.querySelectorAll('input[name="request_ids"]').forEach(input => input.remove());
-
-        // Add selected IDs
-        selected.forEach(cb => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'request_ids';
-            input.value = cb.value;
-            form.appendChild(input);
-        });
-
-        new bootstrap.Modal(document.getElementById('bulkApproveModal')).show();
-    });
-
-    // Bulk reject
-    bulkRejectBtn.addEventListener('click', function() {
-        const selected = Array.from(checkboxes).filter(cb => cb.checked);
-        document.getElementById('bulk-reject-count').textContent = selected.length;
-
-        const form = document.getElementById('bulk-reject-form');
-        // Clear previous hidden inputs
-        form.querySelectorAll('input[name="request_ids"]').forEach(input => input.remove());
-
-        // Add selected IDs
-        selected.forEach(cb => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'request_ids';
-            input.value = cb.value;
-            form.appendChild(input);
-        });
-
-        new bootstrap.Modal(document.getElementById('bulkRejectModal')).show();
-    });
-});
-</script>
 {% endblock %}

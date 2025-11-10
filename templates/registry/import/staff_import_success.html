@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}นำเข้าข้อมูลสำเร็จ{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">หน้าหลัก</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'registry:staff_list' %}">รายการบุคลากร</a></li>
+            <li class="breadcrumb-item active" aria-current="page">ผลการนำเข้า</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Success Header -->
+            <div class="text-center mb-4">
+                <div class="mb-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h2 class="mb-3">นำเข้าข้อมูลเสร็จสิ้น</h2>
+                <p class="text-muted">ระบบได้ทำการนำเข้าข้อมูลจากไฟล์ Excel เรียบร้อยแล้ว</p>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> สรุปผลการนำเข้า</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <!-- Success -->
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="p-4 bg-success bg-opacity-10 rounded">
+                                <i class="bi bi-check-circle text-success" style="font-size: 2.5rem;"></i>
+                                <h3 class="mt-3 mb-2 text-success">{{ import_result.success_count }}</h3>
+                                <p class="mb-0 text-muted">รายการนำเข้าสำเร็จ</p>
+                            </div>
+                        </div>
+
+                        <!-- Skipped -->
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="p-4 bg-warning bg-opacity-10 rounded">
+                                <i class="bi bi-skip-forward text-warning" style="font-size: 2.5rem;"></i>
+                                <h3 class="mt-3 mb-2 text-warning">{{ import_result.skip_count }}</h3>
+                                <p class="mb-0 text-muted">ข้ามข้อมูลซ้ำ</p>
+                            </div>
+                        </div>
+
+                        <!-- Errors -->
+                        <div class="col-md-4">
+                            <div class="p-4 bg-danger bg-opacity-10 rounded">
+                                <i class="bi bi-x-circle text-danger" style="font-size: 2.5rem;"></i>
+                                <h3 class="mt-3 mb-2 text-danger">{{ import_result.error_count }}</h3>
+                                <p class="mb-0 text-muted">ข้อผิดพลาด</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Details -->
+            {% if import_result.error_list %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> รายการที่เกิดข้อผิดพลาด</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 80px;">แถว Excel</th>
+                                    <th>ชื่อ-นามสกุล</th>
+                                    <th>รายละเอียดข้อผิดพลาด</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for error in import_result.error_list %}
+                                <tr>
+                                    <td class="text-center"><span class="badge bg-danger">{{ error.row }}</span></td>
+                                    <td>{{ error.name }}</td>
+                                    <td class="small text-danger">{{ error.error }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Info Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle text-primary"></i> ขั้นตอนต่อไป</h6>
+                    <ul class="mb-0">
+                        <li>ข้อมูลที่นำเข้าจะอยู่ในสถานะ <span class="badge bg-secondary">draft</span></li>
+                        <li>กรุณาเข้าไปแก้ไขข้อมูลแต่ละรายการเพื่อ<strong>แนบรูปภาพ</strong></li>
+                        <li>หลังจากแนบรูปภาพแล้ว สามารถส่งคำขอเพื่อตรวจสอบและอนุมัติได้</li>
+                        {% if import_result.skip_count > 0 %}
+                        <li class="text-warning">ข้อมูลซ้ำ {{ import_result.skip_count }} รายการถูกข้าม เนื่องจากมีบัตรประชาชนซ้ำในระบบ</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                <a href="{% url 'registry:staff_list' %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-list-ul"></i> ไปยังรายการบุคลากร
+                </a>
+                <a href="{% url 'registry:staff_import_upload' %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูลเพิ่ม
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

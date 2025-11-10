@@ -326,9 +326,24 @@ body > .d-flex {
     color: var(--gray-700);
 }
 
+.badge-status.photo_uploaded {
+    background-color: #E0E7FF;
+    color: #4338CA;
+}
+
+.badge-status.ready_to_submit {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
 .badge-status.submitted {
     background-color: #DBEAFE;
     color: #1E40AF;
+}
+
+.badge-status.under_review {
+    background-color: #BFDBFE;
+    color: #1E3A8A;
 }
 
 .badge-status.approved {
@@ -339,6 +354,21 @@ body > .d-flex {
 .badge-status.rejected {
     background-color: var(--danger-color);
     color: #DC2626;
+}
+
+.badge-status.badge_created {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+.badge-status.printed {
+    background-color: #A7F3D0;
+    color: #064E3B;
+}
+
+.badge-status.completed {
+    background-color: #6EE7B7;
+    color: #065F46;
 }
 
 /* Form Styles */
