@@ -571,3 +571,222 @@ body > .d-flex {
         transform: translateY(0);
     }
 }
+
+/* ===================================================
+   SOFT PASTEL BUTTON STYLES (Best Practice)
+   ================================================== */
+
+/* 1. Success Button - Soft Green (ส่งคำขอ, อนุมัติ, ยืนยัน) */
+.btn-success-soft {
+    background-color: #A8D5BA;
+    border-color: #A8D5BA;
+    color: #1e5631;
+    font-weight: 500;
+}
+
+.btn-success-soft:hover {
+    background-color: #8bc9a3;
+    border-color: #8bc9a3;
+    color: #1e5631;
+    box-shadow: 0 2px 8px rgba(168, 213, 186, 0.4);
+}
+
+.btn-outline-success-soft {
+    background-color: transparent;
+    border-color: #A8D5BA;
+    color: #2d5e3f;
+}
+
+.btn-outline-success-soft:hover {
+    background-color: #A8D5BA;
+    border-color: #A8D5BA;
+    color: #1e5631;
+}
+
+/* 2. Danger Button - Soft Red (ลบ, ปฏิเสธ, ยกเลิก) */
+.btn-danger-soft {
+    background-color: #F4A6A6;
+    border-color: #F4A6A6;
+    color: #721c1c;
+    font-weight: 500;
+}
+
+.btn-danger-soft:hover {
+    background-color: #f08e8e;
+    border-color: #f08e8e;
+    color: #5a1414;
+    box-shadow: 0 2px 8px rgba(244, 166, 166, 0.4);
+}
+
+.btn-outline-danger-soft {
+    background-color: transparent;
+    border-color: #F4A6A6;
+    color: #721c1c;
+}
+
+.btn-outline-danger-soft:hover {
+    background-color: #F4A6A6;
+    border-color: #F4A6A6;
+    color: #721c1c;
+}
+
+/* 3. Primary Button - Soft Purple (บันทึก, แก้ไข - หลัก) */
+.btn-primary-soft {
+    background-color: #B4A7D6;
+    border-color: #B4A7D6;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.btn-primary-soft:hover {
+    background-color: #a294ca;
+    border-color: #a294ca;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(180, 167, 214, 0.4);
+}
+
+.btn-outline-primary-soft {
+    background-color: transparent;
+    border-color: #B4A7D6;
+    color: #6b5a9e;
+}
+
+.btn-outline-primary-soft:hover {
+    background-color: #B4A7D6;
+    border-color: #B4A7D6;
+    color: #ffffff;
+}
+
+/* 4. Secondary Button - Soft Gray (ย้อนกลับ, ดูรายละเอียด, ปุ่มรอง) */
+.btn-secondary-soft {
+    background-color: #E5E7EB;
+    border-color: #E5E7EB;
+    color: #4B5563;
+    font-weight: 500;
+}
+
+.btn-secondary-soft:hover {
+    background-color: #D1D5DB;
+    border-color: #D1D5DB;
+    color: #374151;
+    box-shadow: 0 2px 8px rgba(209, 213, 219, 0.4);
+}
+
+.btn-outline-secondary-soft {
+    background-color: transparent;
+    border-color: #D1D5DB;
+    color: #6B7280;
+}
+
+.btn-outline-secondary-soft:hover {
+    background-color: #E5E7EB;
+    border-color: #D1D5DB;
+    color: #4B5563;
+}
+
+/* Override Bootstrap Default Buttons ให้เป็นสีอ่อน */
+.btn-success {
+    background-color: #A8D5BA !important;
+    border-color: #A8D5BA !important;
+    color: #1e5631 !important;
+}
+
+.btn-success:hover {
+    background-color: #8bc9a3 !important;
+    border-color: #8bc9a3 !important;
+    color: #1e5631 !important;
+}
+
+.btn-danger {
+    background-color: #F4A6A6 !important;
+    border-color: #F4A6A6 !important;
+    color: #721c1c !important;
+}
+
+.btn-danger:hover {
+    background-color: #f08e8e !important;
+    border-color: #f08e8e !important;
+    color: #5a1414 !important;
+}
+
+.btn-outline-success {
+    border-color: #A8D5BA !important;
+    color: #2d5e3f !important;
+}
+
+.btn-outline-success:hover {
+    background-color: #A8D5BA !important;
+    border-color: #A8D5BA !important;
+    color: #1e5631 !important;
+}
+
+.btn-outline-danger {
+    border-color: #F4A6A6 !important;
+    color: #721c1c !important;
+}
+
+.btn-outline-danger:hover {
+    background-color: #F4A6A6 !important;
+    border-color: #F4A6A6 !important;
+    color: #721c1c !important;
+}
+
+.btn-outline-secondary {
+    border-color: #D1D5DB !important;
+    color: #6B7280 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #E5E7EB !important;
+    border-color: #D1D5DB !important;
+    color: #4B5563 !important;
+}
+
+/* Remove Warning and Info buttons from UI */
+.btn-warning {
+    background-color: #A8D5BA !important;
+    border-color: #A8D5BA !important;
+    color: #1e5631 !important;
+}
+
+.btn-outline-warning {
+    border-color: #A8D5BA !important;
+    color: #2d5e3f !important;
+}
+
+.btn-outline-warning:hover {
+    background-color: #A8D5BA !important;
+    border-color: #A8D5BA !important;
+    color: #1e5631 !important;
+}
+
+/* ===================================================
+   SOFT PASTEL BADGE HEADER COLORS
+   ================================================== */
+
+/* สีบัตรแบบอ่อน สำหรับ Card Header */
+.badge-header-pink {
+    background-color: #FFD4E5 !important;  /* ชมพูอ่อน */
+    color: #8B4562 !important;  /* ข้อความชมพูเข้ม */
+}
+
+.badge-header-red {
+    background-color: #FFB3B3 !important;  /* แดงอ่อน */
+    color: #7C2D2D !important;  /* ข้อความแดงเข้ม */
+}
+
+.badge-header-yellow {
+    background-color: #FFF4CC !important;  /* เหลืองอ่อน */
+    color: #8B7500 !important;  /* ข้อความเหลืองเข้ม */
+}
+
+.badge-header-green {
+    background-color: #C8E6C9 !important;  /* เขียวอ่อน */
+    color: #2E5C3F !important;  /* ข้อความเขียวเข้ม */
+}
+
+/* Default soft header color */
+.card-header-soft {
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+}

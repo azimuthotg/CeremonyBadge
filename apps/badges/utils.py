@@ -73,17 +73,20 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
     template_path = get_badge_template_path(badge_type_color)
     badge_img = Image.open(template_path).convert('RGB')
 
-    # 2. วางรูปบุคลากร (มุมซ้ายบน)
-    if photo and photo.cropped_photo:
+    # 2. วางรูปบุคลากร (มุมซ้ายบน) - เฉพาะบัตรสีชมพูและสีแดง
+    if badge_type_color in ['pink', 'red'] and photo and photo.cropped_photo:
         try:
             # โหลดรูปที่ crop แล้ว
             photo_path = photo.cropped_photo.path
             staff_photo = Image.open(photo_path).convert('RGB')
 
-            # Resize รูปถ้าจำเป็น (ให้เหมาะกับบัตร)
-            # ตอนนี้รูป cropped เป็น 300x400 อยู่แล้ว
-            # วางที่มุมซ้ายบน (เผื่อพื้นที่ขอบเล็กน้อย)
-            position = (20, 20)  # x=20px, y=20px จากมุมซ้ายบน
+            # Resize รูปให้เล็กลง (จากเดิม 300x400 เหลือ 270x360 = 90%)
+            new_width = 270
+            new_height = 360
+            staff_photo = staff_photo.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+            # วางที่มุมซ้ายบน - เว้นขอบเล็กน้อย 3px
+            position = (3, 3)  # x=3px (เว้นขอบซ้ายนิดหน่อย), y=3px (เว้นขอบบนนิดหน่อย)
             badge_img.paste(staff_photo, position)
         except Exception as e:
             print(f"Error loading staff photo: {e}")
@@ -100,6 +103,7 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
         # ใช้ขนาดใหญ่ขึ้นเพื่อให้อ่านง่าย
         font_regular = ImageFont.truetype(font_regular_path, 48)  # ขนาด 48
         font_bold = ImageFont.truetype(font_bold_path, 60)        # ขนาด 60
+        font_bold_large = ImageFont.truetype(font_bold_path, 70)  # ขนาด 70 สำหรับตำแหน่งและวันที่
         font_small = ImageFont.truetype(font_regular_path, 40)    # ขนาด 40 สำหรับข้อความเล็ก
 
         print(f"Font loaded successfully: {font_regular_path}")
@@ -108,6 +112,7 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
         # Fallback to default
         font_regular = ImageFont.load_default()
         font_bold = ImageFont.load_default()
+        font_bold_large = ImageFont.load_default()
         font_small = ImageFont.load_default()
 
     # สีข้อความ (ดำ)
@@ -117,61 +122,75 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
     badge_width = badge_img.width
     badge_height = badge_img.height
 
-    # 1. หมายเลขบัตร (เลขไทย) - มุมบนขวา
+    # 1. หมายเลขบัตร (เลขไทย) - มุมบนขวา (ขยับขึ้น 5px และชิดขวาอีก 60px)
     thai_badge_number = arabic_to_thai_numerals(badge_number.split('-')[1])
     badge_number_text = f"หมายเลข {thai_badge_number}"
-    draw.text((badge_width - 350, 30), badge_number_text, fill=text_color, font=font_bold)
+    draw.text((badge_width - 290, 25), badge_number_text, fill=text_color, font=font_bold)
 
-    # 2. โซน (ตัวย่อ) - มุมบนขวา (ใต้หมายเลข)
+    # 2. โซน (ตัวย่อ) - มุมบนขวา (ใต้หมายเลข) - ไม่มีกรอบ, ตัวอักษรสีแดง, ขนาดใหญ่ขึ้น
     if staff_profile.zone:
         zone_text = f" {staff_profile.zone.code}"
 
-        # สร้าง font สำหรับโซนขนาด 80 ตัวหนา
+        # สร้าง font สำหรับโซน ขนาด 180
         try:
-            font_zone = ImageFont.truetype(font_bold_path, 120)
+            font_zone = ImageFont.truetype(font_bold_path, 180)
         except:
             font_zone = font_bold
 
-        # วาดกรอบสี่เหลี่ยม
-        try:
-            bbox = draw.textbbox((0, 0), zone_text, font=font_zone)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
-        except:
-            text_width = 120
-            text_height = 60
+        # ตำแหน่งตัวอักษร (อิสระ - ปรับได้เอง) - ขยับขึ้นจากมุมล่าง
+        # ปรับ X ตามจำนวนตัวอักษร เพื่อให้อยู่ตรงกลาง
+        zone_code_length = len(staff_profile.zone.code.strip())
+        if zone_code_length == 1:
+            text_x = badge_width - 220  # อักษร 1 ตัว เช่น A, B, C
+        else:
+            text_x = badge_width - 290  # อักษร 2+ ตัว เช่น D, E (ค่าปัจจุบัน)
 
-        # ตำแหน่งกรอบ (อิสระ)
-        box_x = badge_width - 160  # ตำแหน่ง x ของกรอบ
-        box_y = 655                 # ตำแหน่ง y ของกรอบ
+        text_y = 570                 # ตำแหน่ง y (ขยับขึ้นจาก 620)
+        zone_color = (255, 0, 0)     # สีแดง RGB
+        draw.text((text_x, text_y), zone_text, fill=zone_color, font=font_zone)
 
-        # วาดกรอบ (ขยายความยาว/กว้าง แกน X เป็น 150%)
-        # ซ้าย-ขวา: -60 ถึง +60 (padding 120px - เพิ่ม 150%)
-        # บน-ล่าง: -20 ถึง +30 (ความสูงคงเดิม)
-        draw.rectangle(
-            [(box_x - 60, box_y - 20), (box_x + text_width + 60, box_y + text_height + 30)],
-            outline=(255, 0, 0),
-            width=4
-        )
+    # 3. ชื่อ 2 บรรทัด (เฉพาะบัตรสีชมพูและสีแดง - บัตรสีเหลืองและสีเขียวไม่ต้องแสดงชื่อ)
+    if badge_type_color in ['pink', 'red']:
+        # ใช้ display_name ถ้ามี มิฉะนั้นใช้ first_line/last_line
+        if staff_profile.display_name:
+            # แยกบรรทัดด้วย | (เช่น "ศ. ดร.นายแพทย์กระแส|ชนะวงศ์")
+            name_lines = staff_profile.display_name.split('|')
 
-        # ตำแหน่งตัวอักษร (อิสระ - ปรับได้เอง)
-        text_x = badge_width - 170  # ตำแหน่ง x ของตัวอักษร
-        text_y = 620                 # ตำแหน่ง y ของตัวอักษร
-        draw.text((text_x, text_y), zone_text, fill=text_color, font=font_zone)
+            if len(name_lines) == 2:
+                # มี 2 บรรทัด (บรรทัด 1 | บรรทัด 2) - ขยับขึ้น 40px (ปรับลงมา 10px จาก 410)
+                name_y = badge_height - 400
+                draw.text((30, name_y), name_lines[0].strip(), fill=text_color, font=font_bold)
 
-    # 3. ยศ ชื่อ - บรรทัดที่ 1
-    first_line = f"{staff_profile.title} {staff_profile.first_name}"
-    name_y = badge_height - 330
-    draw.text((30, name_y), first_line, fill=text_color, font=font_bold)
+                # นามสกุล - บรรทัดที่ 2
+                name_y += 60
+                draw.text((60, name_y), name_lines[1].strip(), fill=text_color, font=font_bold)
+            else:
+                # แสดงบรรทัดเดียว (ไม่มี |) - ปรับลงมา 10px
+                name_y = badge_height - 380
+                draw.text((30, name_y), staff_profile.display_name, fill=text_color, font=font_bold)
+        else:
+            # ใช้ first_line และ last_line
+            # บรรทัด 1: ยศชื่อ (ไม่เว้นวรรค) - ขยับขึ้น 40px (ปรับลงมา 10px จาก 410)
+            name_y = badge_height - 400
+            draw.text((30, name_y), staff_profile.first_line, fill=text_color, font=font_bold)
 
-    # นามสกุล - บรรทัดที่ 2
-    name_y += 60  # ขึ้นบรรทัดใหม่
-    draw.text((60, name_y), staff_profile.last_name, fill=text_color, font=font_bold)
+            # บรรทัด 2: นามสกุล
+            name_y += 60  # ขึ้นบรรทัดใหม่
+            draw.text((60, name_y), staff_profile.last_line, fill=text_color, font=font_bold)
 
-    # 4. หน้าที่/ตำแหน่ง - ตำแหน่งอิสระ
-    position_text = staff_profile.position
-    position_y = badge_height - 280  # กำหนดตำแหน่งเอง
-    draw.text((510, position_y), position_text, fill=text_color, font=font_bold)
+    # 4. หน้าที่/ตำแหน่ง - ปรับ X ให้อยู่กลางโลโก้ตามความยาวข้อความ
+    position_text = f" {staff_profile.position}"  # เพิ่มช่องว่างหน้า
+    position_y = badge_height - 290  # กำหนดตำแหน่งเอง
+
+    # กำหนด X ตามข้อความเพื่อให้อยู่กลางโลโก้
+    if "ผู้ร่วมพิธี" in staff_profile.position:
+        position_x = 480  # ข้อความสั้น
+    elif "ผู้ปฏิบัติงาน" in staff_profile.position:
+        position_x = 445  # ข้อความยาวกว่า เลื่อนซ้ายนิดหน่อย
+    else:
+        position_x = 480  # ค่า default (ใช้เท่ากับผู้ร่วมพิธี)
+
+    draw.text((position_x, position_y), position_text, fill=text_color, font=font_bold_large)
 
     # 5. วันที่ปฏิบัติงาน - ล่างสุด (เลขไทย)
     from apps.settings_app.models import SystemSetting
@@ -181,9 +200,9 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
 
     if work_date_setting:
         work_date = format_thai_date(work_date_setting.value, short=True, use_thai_numerals=True)
-        work_date_text = f"วันที่ {work_date}"
-        date_y = badge_height - 220
-        draw.text((450, date_y), work_date_text, fill=text_color, font=font_bold)
+        work_date_text = f" {work_date}"  # เว้นวรรคหน้า 1 เคาะ เช่น " ๒๔ ธ.ค. ๒๕๖๘"
+        date_y = badge_height - 230
+        draw.text((410, date_y), work_date_text, fill=text_color, font=font_bold_large)
 
     # 6. ข้อมูลผู้เซ็นบัตร
     # Note: ตอนสร้างบัตรครั้งแรกยังไม่รู้ว่าจะใช้ผู้เซ็นคนไหน
@@ -230,9 +249,27 @@ def get_next_badge_number(badge_type):
     """
     from apps.badges.models import Badge
 
-    # นับจำนวนบัตรที่มีอยู่แล้วสำหรับประเภทนี้
-    count = Badge.objects.filter(badge_type=badge_type).count()
-    next_number = count + 1
+    # หาหมายเลขสูงสุดที่มีอยู่แล้วสำหรับประเภทนี้
+    # เพื่อป้องกันปัญหาเลขซ้ำเมื่อมีการลบบัตร (เช่น เปลี่ยนสีบัตร)
+    badges = Badge.objects.filter(badge_type=badge_type)
+
+    if badges.exists():
+        # ดึงหมายเลขทั้งหมดและแปลงจากเลขไทยเป็นเลขอารบิก
+        max_number = 0
+        for badge in badges:
+            # badge_number format: "pink-๐๐๗" → แยกเอาส่วน "๐๐๗"
+            number_part = badge.badge_number.split('-')[1]
+            # แปลงเลขไทยเป็นเลขอารบิก
+            arabic_number = 0
+            for digit in number_part:
+                arabic_digit = '๐๑๒๓๔๕๖๗๘๙'.index(digit) if digit in '๐๑๒๓๔๕๖๗๘๙' else 0
+                arabic_number = arabic_number * 10 + arabic_digit
+            max_number = max(max_number, arabic_number)
+
+        next_number = max_number + 1
+    else:
+        # ถ้ายังไม่มีบัตรเลย เริ่มจาก 1
+        next_number = 1
 
     # แปลงเป็นเลขไทย 3 หลัก (เติม 0 ข้างหน้า)
     thai_number = arabic_to_thai_numerals(str(next_number).zfill(3))

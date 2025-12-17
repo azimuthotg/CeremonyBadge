@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load report_filters %}
+
+{% block title %}รายงานหน่วยงาน{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="bi bi-building"></i> รายงานหน่วยงาน: {{ department.name }}</h2>
+            <p class="text-muted">สรุปข้อมูลบุคลากรในหน่วยงานของคุณ</p>
+        </div>
+    </div>
+
+    <!-- สถิติรวม -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-start border-4 border-primary">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-people-fill text-primary" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="text-primary">{{ total_staff }}</h3>
+                    <p class="text-muted mb-0">บุคลากรทั้งหมด</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-start border-4 border-warning">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-clock-history text-warning" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="text-warning">{{ pending_requests }}</h3>
+                    <p class="text-muted mb-0">รอดำเนินการ</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-start border-4 border-info">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-send-fill text-info" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="text-info">{{ submitted_requests }}</h3>
+                    <p class="text-muted mb-0">ส่งตรวจสอบแล้ว</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-start border-4 border-success">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="text-success">{{ approved_badges }}</h3>
+                    <p class="text-muted mb-0">อนุมัติแล้ว</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- สถิติตามประเภทบัตร -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header badge-header-pink">
+                    <strong><i class="bi bi-pie-chart-fill"></i> สถิติตามประเภทบัตร</strong>
+                </div>
+                <div class="card-body">
+                    {% if badge_type_stats %}
+                    <div class="row">
+                        {% for stat in badge_type_stats %}
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center p-3 border rounded" style="background-color: {{ stat.badge_type__color_code }}20;">
+                                <div class="mb-2">
+                                    <i class="bi bi-award-fill" style="font-size: 2rem; color: {{ stat.badge_type__color_code }};"></i>
+                                </div>
+                                <h4 style="color: {{ stat.badge_type__color_code }};">{{ stat.total }}</h4>
+                                <p class="mb-0"><strong>{{ stat.badge_type__name }}</strong></p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-2">ยังไม่มีข้อมูลบัตร</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ตัวกรอง -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">กรองตามสถานะ</label>
+                            <select name="status" class="form-select">
+                                <option value="">-- ทั้งหมด --</option>
+                                <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>ร่าง</option>
+                                <option value="photo_uploaded" {% if status_filter == 'photo_uploaded' %}selected{% endif %}>อัปโหลดรูปแล้ว</option>
+                                <option value="ready_to_submit" {% if status_filter == 'ready_to_submit' %}selected{% endif %}>พร้อมส่ง</option>
+                                <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>ส่งแล้ว</option>
+                                <option value="under_review" {% if status_filter == 'under_review' %}selected{% endif %}>กำลังตรวจสอบ</option>
+                                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>อนุมัติ</option>
+                                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>ส่งกลับ</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">กรองตามประเภทบัตร</label>
+                            <select name="badge_type" class="form-select">
+                                <option value="">-- ทั้งหมด --</option>
+                                {% for bt in badge_types %}
+                                <option value="{{ bt.id }}" {% if badge_type_filter == bt.id|stringformat:'s' %}selected{% endif %}>
+                                    {{ bt.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-funnel"></i> กรอง
+                            </button>
+                            {% if status_filter or badge_type_filter %}
+                            <a href="{% url 'reports:submitter_report' %}" class="btn btn-outline-secondary ms-2">
+                                <i class="bi bi-x"></i> ล้าง
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- รายการบุคลากร -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header badge-header-green">
+                    <strong><i class="bi bi-people"></i> รายการบุคลากร</strong>
+                </div>
+                <div class="card-body">
+                    {% if staff_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="20%">ชื่อ-นามสกุล</th>
+                                    <th width="18%">ตำแหน่ง</th>
+                                    <th width="12%">ประเภทบัตร</th>
+                                    <th width="10%">โซน</th>
+                                    <th width="12%">สถานะ</th>
+                                    <th width="12%">สร้างเมื่อ</th>
+                                    <th width="11%" class="text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for staff in staff_list %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td><strong>{{ staff.full_name }}</strong></td>
+                                    <td>{{ staff.position }}</td>
+                                    <td>
+                                        <span class="badge badge-header-{{ staff.badge_type.color }}">
+                                            {{ staff.badge_type.name }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if staff.zone %}
+                                            {{ staff.zone.code }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if staff.badge_request %}
+                                            <span class="badge-status {{ staff.badge_request.status }}">
+                                                {{ staff.badge_request.get_status_display }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge-status draft">ยังไม่มีคำขอ</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ staff.created_at|date:"d/m/Y" }}</small></td>
+                                    <td class="text-center">
+                                        <a href="{% url 'registry:staff_detail' staff.id %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                        <p class="mt-3">
+                            {% if status_filter or badge_type_filter %}
+                                ไม่พบข้อมูลที่ตรงกับเงื่อนไข
+                            {% else %}
+                                ยังไม่มีข้อมูลบุคลากร
+                            {% endif %}
+                        </p>
+                        {% if not status_filter and not badge_type_filter %}
+                        <a href="{% url 'registry:wizard_step1' %}" class="btn btn-success mt-3">
+                            <i class="bi bi-person-plus"></i> เริ่มลงทะเบียน
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- สรุปข้อมูล -->
+    {% if rejected_requests > 0 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <strong>แจ้งเตือน:</strong> มีบุคลากร {{ rejected_requests }} รายการที่ถูกส่งกลับให้แก้ไข กรุณาตรวจสอบและแก้ไขข้อมูล
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -60,13 +60,18 @@ class StaffProfile(models.Model):
         related_name='staff_profiles',
         verbose_name="หน่วยงาน"
     )
-    title = models.CharField(
-        max_length=50,
-        verbose_name="ยศ",
-        help_text="เช่น นาย, นาง, น.ส., พล.อ., พล.ต. ฯลฯ"
+    first_line = models.CharField(
+        max_length=200,
+        verbose_name="ยศชื่อ",
+        help_text="ยศและชื่อรวมกัน (ไม่เว้นวรรค) เช่น นายสมชาย, นางสาวสมหญิง",
+        default=''
     )
-    first_name = models.CharField(max_length=100, verbose_name="ชื่อ")
-    last_name = models.CharField(max_length=100, verbose_name="นามสกุล")
+    last_line = models.CharField(
+        max_length=100,
+        verbose_name="นามสกุล",
+        help_text="นามสกุล เช่น ใจดี, รักษาดี",
+        default=''
+    )
     national_id = models.CharField(
         max_length=13,
         blank=True,
@@ -117,19 +122,17 @@ class StaffProfile(models.Model):
     email = models.EmailField(blank=True, null=True, verbose_name="อีเมล")
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="เบอร์โทรศัพท์")
 
-    # การรับวัคซีน
-    vaccine_dose_1 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๑")
-    vaccine_dose_2 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๒")
-    vaccine_dose_3 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๓")
-    vaccine_dose_4 = models.BooleanField(default=False, verbose_name="วัคซีนเข็ม ๔")
-
-    # การตรวจโควิดก่อนการปฏิบัติงาน
-    test_rt_pcr = models.BooleanField(default=False, verbose_name="RT-PCR")
-    test_atk = models.BooleanField(default=False, verbose_name="ATK")
-    test_temperature = models.BooleanField(default=False, verbose_name="วัดอุณหภูมิ")
-
     # หมายเหตุและข้อมูลระบบ
     notes = models.TextField(blank=True, null=True, verbose_name="หมายเหตุ")
+
+    # ชื่อที่แสดงบนบัตร (สำหรับกรณีชื่อยาว)
+    display_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="ชื่อที่แสดงบนบัตร",
+        help_text="ถ้าไม่กรอก จะใช้ชื่อเต็มอัตโนมัติ (ใช้สำหรับย่อชื่อยาว)"
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -144,7 +147,7 @@ class StaffProfile(models.Model):
         db_table = 'staff_profiles'
         verbose_name = 'ข้อมูลบุคลากร'
         verbose_name_plural = 'ข้อมูลบุคลากร'
-        ordering = ['last_name', 'first_name']
+        ordering = ['last_line', 'first_line']
 
     def __str__(self):
         return self.full_name
@@ -152,7 +155,7 @@ class StaffProfile(models.Model):
     @property
     def full_name(self):
         """ชื่อเต็ม"""
-        return f"{self.title}{self.first_name} {self.last_name}"
+        return f"{self.first_line} {self.last_line}"
 
     @property
     def full_name_with_position(self):
@@ -280,7 +283,7 @@ class BadgeRequest(models.Model):
     def can_submit(self):
         """ตรวจสอบว่าสามารถส่งได้หรือไม่"""
         # ถ้าต้องการรูป ต้องมีรูปก่อนส่งได้
-        if self.staff_profile.badge_type.requires_photo():
+        if self.staff_profile.badge_type.requires_photo:
             return self.status in ['ready_to_submit', 'rejected'] and hasattr(self.staff_profile, 'photo')
         # ถ้าไม่ต้องการรูป (yellow/green) ส่งได้เลย
         return self.status in ['ready_to_submit', 'rejected']

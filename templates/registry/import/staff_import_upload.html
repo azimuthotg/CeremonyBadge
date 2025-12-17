@@ -3,6 +3,14 @@
 
 {% block title %}นำเข้าข้อมูลจาก Excel{% endblock %}
 
+{% block extra_css %}
+<style>
+#sheet-selector-container {
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- Breadcrumb -->
@@ -41,38 +49,90 @@
                     <h6 class="mb-0 text-dark"><i class="bi bi-info-circle"></i> รูปแบบไฟล์ Excel</h6>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>ระบบรองรับ 2 รูปแบบ:</strong> ระบบจะตรวจจับรูปแบบไฟล์อัตโนมัติ
+                    </div>
+
                     <p class="mb-2"><strong>โครงสร้างไฟล์:</strong></p>
                     <ul class="small">
-                        <li>แถวที่ 1-4: หัวข้อ (ระบบจะข้ามไป)</li>
-                        <li>แถวที่ 5 เป็นต้นไป: ข้อมูลบุคลากร</li>
+                        <li>แถวที่ 1-2: หัวข้อ (ระบบจะข้ามไป)</li>
+                        <li>แถวที่ 3: ชื่อคอลัมน์</li>
+                        <li>แถวที่ 4 เป็นต้นไป: ข้อมูลบุคลากร</li>
                     </ul>
 
-                    <p class="mb-2 mt-3"><strong>คอลัมน์ที่ต้องมี (A-P):</strong></p>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>คอลัมน์</th>
-                                    <th>ชื่อฟิลด์</th>
-                                    <th>ตัวอย่าง</th>
-                                </tr>
-                            </thead>
-                            <tbody class="small">
-                                <tr><td>A</td><td>ลำดับ</td><td>1, 2, 3...</td></tr>
-                                <tr><td>B</td><td>ยศ</td><td>นาย, นาง, พล.อ.</td></tr>
-                                <tr><td>C</td><td>ชื่อ</td><td>สมชาย</td></tr>
-                                <tr><td>D</td><td>นามสกุล</td><td>ใจดี</td></tr>
-                                <tr><td>E</td><td>บัตรประชาชน</td><td>1234567890123</td></tr>
-                                <tr><td>F</td><td>หน่วยงาน</td><td>ม.นครพนม</td></tr>
-                                <tr><td>G</td><td>ประเภทบุคคล</td><td>บุคคลชั้นในสุด</td></tr>
-                                <tr><td>H</td><td>หน้าที่</td><td>เจ้าหน้าที่</td></tr>
-                                <tr><td>I</td><td>อายุ</td><td>35</td></tr>
-                                <tr><td>J-M</td><td>วัคซีนเข็ม 1-4</td><td>1 (ถ้ารับ)</td></tr>
-                                <tr><td>N</td><td>RT-PCR</td><td>1 (ถ้าตรวจ)</td></tr>
-                                <tr><td>O</td><td>ATK</td><td>1 (ถ้าตรวจ)</td></tr>
-                                <tr><td>P</td><td>วัดอุณหภูมิ</td><td>1 (ถ้าตรวจ)</td></tr>
-                            </tbody>
-                        </table>
+                    <!-- Tab for 2 formats -->
+                    <ul class="nav nav-tabs mt-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="format-new-tab" data-bs-toggle="tab" data-bs-target="#format-new" type="button" role="tab">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> ฟอร์มใหม่ (แยกคอลัมน์)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="format-old-tab" data-bs-toggle="tab" data-bs-target="#format-old" type="button" role="tab">
+                                <i class="bi bi-file-earmark-text"></i> ฟอร์มเก่า (รวมคอลัมน์)
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content mt-3">
+                        <!-- Format NEW -->
+                        <div class="tab-pane fade show active" id="format-new" role="tabpanel">
+                            <p class="mb-2"><strong>คอลัมน์ที่ต้องมี (A-K):</strong></p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>คอลัมน์</th>
+                                            <th>ชื่อฟิลด์</th>
+                                            <th>ตัวอย่าง</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small">
+                                        <tr><td>A</td><td>ลำดับ</td><td>1, 2, 3...</td></tr>
+                                        <tr class="table-success"><td>B</td><td>ยศ</td><td>นาย, นาง, พล.อ.</td></tr>
+                                        <tr class="table-success"><td>C</td><td>ชื่อ</td><td>สมชาย, สมหญิง</td></tr>
+                                        <tr class="table-success"><td>D</td><td>นามสกุล</td><td>ใจดี, รักษาดี</td></tr>
+                                        <tr><td>E</td><td>บัตรประชาชน 13 หลัก</td><td>1234567890123</td></tr>
+                                        <tr><td>F</td><td>หน่วยงาน</td><td>ม.นครพนม</td></tr>
+                                        <tr><td>G</td><td>ประเภทบุคคล</td><td>บุคคลชั้นในสุด</td></tr>
+                                        <tr><td>H</td><td>หน้าที่</td><td>เจ้าหน้าที่</td></tr>
+                                        <tr><td>I</td><td>อายุ</td><td>35</td></tr>
+                                        <tr><td>J</td><td>ทะเบียนรถ</td><td>กข 1234 กรุงเทพฯ</td></tr>
+                                        <tr><td>K</td><td>รูปภาพ</td><td>(ไม่ import ผ่าน Excel)</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted small"><i class="bi bi-info-circle"></i> ระบบจะรวม <strong>ยศ + ชื่อ</strong> (ไม่เว้นวรรค) เป็นบรรทัด 1 บนบัตร, <strong>นามสกุล</strong> เป็นบรรทัด 2</p>
+                        </div>
+
+                        <!-- Format OLD -->
+                        <div class="tab-pane fade" id="format-old" role="tabpanel">
+                            <p class="mb-2"><strong>คอลัมน์ที่ต้องมี (A-I):</strong></p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>คอลัมน์</th>
+                                            <th>ชื่อฟิลด์</th>
+                                            <th>ตัวอย่าง</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small">
+                                        <tr><td>A</td><td>ลำดับ</td><td>1, 2, 3...</td></tr>
+                                        <tr class="table-warning"><td>B</td><td>ยศ - ชื่อ สกุล</td><td>นาย สมชาย ใจดี, นางสาว สมหญิง รักษาดี</td></tr>
+                                        <tr><td>C</td><td>บัตรประชาชน 13 หลัก</td><td>1234567890123</td></tr>
+                                        <tr><td>D</td><td>หน่วยงาน</td><td>ม.นครพนม</td></tr>
+                                        <tr><td>E</td><td>ประเภทบุคคล</td><td>บุคคลชั้นกลาง</td></tr>
+                                        <tr><td>F</td><td>บทบาทหน้าที่</td><td>ผู้ปฏิบัติงาน</td></tr>
+                                        <tr><td>G</td><td>อายุ</td><td>45</td></tr>
+                                        <tr><td>H</td><td>ทะเบียนรถ</td><td>ฮฐ 1869 กรุงเทพฯ</td></tr>
+                                        <tr><td>I</td><td>หมายเหตุ</td><td>(ถ้ามี)</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted small"><i class="bi bi-info-circle"></i> ระบบจะแยก <strong>ยศ+ชื่อ</strong> (ไม่เว้นวรรค) เป็นบรรทัด 1, <strong>นามสกุล</strong> เป็นบรรทัด 2 อัตโนมัติ</p>
+                        </div>
                     </div>
 
                     <div class="alert alert-warning mt-3 mb-0">
@@ -92,4 +152,68 @@
     font-weight: bold;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('id_excel_file');
+    const sheetSelect = document.getElementById('sheet_name_dropdown');
+    const sheetContainer = document.getElementById('sheet-selector-container');
+
+    fileInput.addEventListener('change', async function() {
+        const file = this.files[0];
+        if (!file) {
+            sheetContainer.style.display = 'none';
+            return;
+        }
+
+        // ตรวจสอบว่าเป็นไฟล์ .xlsx
+        if (!file.name.endsWith('.xlsx')) {
+            sheetContainer.style.display = 'none';
+            return;
+        }
+
+        // สร้าง FormData และเรียก AJAX
+        const formData = new FormData();
+        formData.append('excel_file', file);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        try {
+            const response = await fetch('{% url "registry:get_excel_sheets" %}', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.sheets && data.sheets.length > 0) {
+                // ล้าง options เก่า
+                sheetSelect.innerHTML = '<option value="">-- เลือก Sheet --</option>';
+
+                // เพิ่ม option ใหม่
+                data.sheets.forEach(function(sheetName) {
+                    const option = document.createElement('option');
+                    option.value = sheetName;
+                    option.textContent = sheetName;
+                    sheetSelect.appendChild(option);
+                });
+
+                // แสดง dropdown ถ้ามีมากกว่า 1 sheet
+                if (data.sheets.length > 1) {
+                    sheetContainer.style.display = 'block';
+                } else {
+                    // ถ้ามี 1 sheet เดียว ซ่อน dropdown แต่เลือกอัตโนมัติ
+                    sheetSelect.selectedIndex = 1;  // เลือก sheet แรก (index 1 เพราะ 0 คือ "-- เลือก Sheet --")
+                    sheetContainer.style.display = 'none';
+                }
+            } else {
+                sheetContainer.style.display = 'none';
+                console.error('Failed to load sheets:', data.error);
+            }
+        } catch (error) {
+            console.error('Error fetching sheets:', error);
+            sheetContainer.style.display = 'none';
+        }
+    });
+});
+</script>
 {% endblock %}

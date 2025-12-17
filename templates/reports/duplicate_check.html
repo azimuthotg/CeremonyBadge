@@ -1,0 +1,541 @@
+{% extends 'base.html' %}
+
+{% block title %}ตรวจสอบข้อมูลซ้ำ{% endblock %}
+
+{% block extra_css %}
+<style>
+.stat-card {
+    border-radius: 8px;
+    border: 1px solid #E5E7EB;
+    padding: 15px;
+    height: 100%;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 5px 0;
+}
+
+.duplicate-group-card {
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+
+.duplicate-header {
+    background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+    padding: 15px;
+    border-bottom: 1px solid #FCA5A5;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.duplicate-header:hover {
+    background: linear-gradient(135deg, #FECACA 0%, #FCA5A5 100%);
+}
+
+.duplicate-body {
+    padding: 15px;
+    background-color: #FFFBEB;
+}
+
+.profile-item {
+    background-color: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.profile-item:last-child {
+    margin-bottom: 0;
+}
+
+.badge-pill {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.tab-content {
+    padding-top: 20px;
+}
+
+.national-id-group {
+    background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+}
+
+.no-national-id-table {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="bi bi-search"></i> ตรวจสอบข้อมูล</h2>
+            <p class="text-muted">ตรวจสอบข้อมูลบุคลากร: ชื่อซ้ำ, บัตรประชาชนซ้ำ, ไม่มีบัตรประชาชน, และไม่มีรูปถ่าย</p>
+        </div>
+    </div>
+
+    <!-- สถิติรวม -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-2 col-md-4">
+            <div class="stat-card" style="border-left: 4px solid #A78BFA;">
+                <div class="text-muted small">บุคลากรทั้งหมด</div>
+                <div class="stat-value" style="color: #6D28D9; font-size: 2rem;">{{ total_staff }}</div>
+            </div>
+        </div>
+
+        <div class="col-lg-2 col-md-4">
+            <div class="stat-card" style="border-left: 4px solid #EF4444;">
+                <div class="text-muted small">ชื่อซ้ำ (กลุ่ม)</div>
+                <div class="stat-value" style="color: #DC2626; font-size: 2rem;">{{ unique_name_duplicate_groups }}</div>
+                <small class="text-muted">รวม {{ total_name_duplicates }} คน</small>
+            </div>
+        </div>
+
+        <div class="col-lg-2 col-md-4">
+            <div class="stat-card" style="border-left: 4px solid #F59E0B;">
+                <div class="text-muted small">บัตรประชาชนซ้ำ</div>
+                <div class="stat-value" style="color: #D97706; font-size: 2rem;">{{ unique_national_id_duplicate_groups }}</div>
+                <small class="text-muted">รวม {{ total_national_id_duplicates }} คน</small>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left: 4px solid #3B82F6;">
+                <div class="text-muted small">ไม่มีบัตรประชาชน</div>
+                <div class="stat-value" style="color: #2563EB; font-size: 2rem;">{{ total_no_national_id }}</div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card" style="border-left: 4px solid #8B5CF6;">
+                <div class="text-muted small">ไม่มีรูปถ่าย</div>
+                <div class="stat-value" style="color: #7C3AED; font-size: 2rem;">{{ total_no_photo }}</div>
+                <small class="text-muted">บัตรชมพู/แดง</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="duplicateTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="name-tab" data-bs-toggle="tab" data-bs-target="#name" type="button" role="tab">
+                <i class="bi bi-person-x-fill"></i> ชื่อซ้ำ
+                {% if unique_name_duplicate_groups > 0 %}
+                <span class="badge bg-danger ms-2">{{ unique_name_duplicate_groups }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="national-id-tab" data-bs-toggle="tab" data-bs-target="#national-id" type="button" role="tab">
+                <i class="bi bi-credit-card-2-front"></i> บัตรประชาชนซ้ำ
+                {% if unique_national_id_duplicate_groups > 0 %}
+                <span class="badge bg-warning text-dark ms-2">{{ unique_national_id_duplicate_groups }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="no-national-id-tab" data-bs-toggle="tab" data-bs-target="#no-national-id" type="button" role="tab">
+                <i class="bi bi-exclamation-triangle-fill"></i> ไม่มีบัตรประชาชน
+                {% if total_no_national_id > 0 %}
+                <span class="badge bg-info ms-2">{{ total_no_national_id }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="no-photo-tab" data-bs-toggle="tab" data-bs-target="#no-photo" type="button" role="tab">
+                <i class="bi bi-image"></i> ไม่มีรูปถ่าย
+                {% if total_no_photo > 0 %}
+                <span class="badge bg-purple ms-2" style="background-color: #8B5CF6;">{{ total_no_photo }}</span>
+                {% endif %}
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="duplicateTabContent">
+        <!-- Tab 1: ชื่อซ้ำ -->
+        <div class="tab-pane fade show active" id="name" role="tabpanel">
+            {% if unique_name_duplicate_groups == 0 %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i> <strong>ไม่พบชื่อซ้ำ</strong> - ข้อมูลสะอาดแล้ว!
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <strong>พบชื่อซ้ำ {{ unique_name_duplicate_groups }} กลุ่ม</strong> (รวม {{ total_name_duplicates }} รายการ)
+                - กรุณาตรวจสอบว่าเป็นคนเดียวกันหรือคนคนละคน
+            </div>
+
+            {% for group in name_duplicate_groups %}
+            <div class="duplicate-group-card">
+                <div class="duplicate-header" data-bs-toggle="collapse" data-bs-target="#collapse-name-{{ forloop.counter }}">
+                    <div class="row align-items-center">
+                        <div class="col-md-5">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-fill text-danger"></i> {{ group.full_name }}
+                            </h5>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="badge bg-danger">พบ {{ group.count }} รายการ</span>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted"><i class="bi bi-building"></i> {{ group.departments }}</small>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <i class="bi bi-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="collapse" id="collapse-name-{{ forloop.counter }}">
+                    <div class="duplicate-body">
+                        <div class="row">
+                            {% for profile in group.profiles %}
+                            <div class="col-md-6 mb-3">
+                                <div class="profile-item">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0">
+                                            <a href="{% url 'registry:staff_detail' profile.id %}" target="_blank">
+                                                {{ profile.full_name }}
+                                                <i class="bi bi-box-arrow-up-right small"></i>
+                                            </a>
+                                        </h6>
+                                        <span class="badge-pill" style="background-color: {{ profile.badge_type.color_code }}; color: white;">
+                                            {{ profile.badge_type.name }}
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted">
+                                        <div><i class="bi bi-credit-card"></i> บัตรประชาชน: {{ profile.national_id|default:"ไม่ระบุ" }}</div>
+                                        <div><i class="bi bi-building"></i> หน่วยงาน: {{ profile.department.name }}</div>
+                                        <div><i class="bi bi-briefcase"></i> ตำแหน่ง: {{ profile.position }}</div>
+                                        {% if profile.zone %}
+                                        <div><i class="bi bi-geo-alt"></i> โซน: {{ profile.zone.code }}</div>
+                                        {% endif %}
+                                        <div><i class="bi bi-envelope"></i> อีเมล: {{ profile.email|default:"ไม่ระบุ" }}</div>
+                                        <div><i class="bi bi-telephone"></i> โทร: {{ profile.phone|default:"ไม่ระบุ" }}</div>
+                                        {% if profile.badge_request %}
+                                        <div class="mt-2">
+                                            <span class="badge bg-secondary">{{ profile.badge_request.get_status_display }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-2">
+                                        <a href="{% url 'registry:staff_detail' profile.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> ดูข้อมูล
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="alert alert-info mt-3 mb-0">
+                            <strong><i class="bi bi-lightbulb"></i> แนะนำ:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>ถ้าเป็น<strong>คนเดียวกัน</strong> → ลบรายการที่ซ้ำ (เหลือ 1 รายการ)</li>
+                                <li>ถ้า<strong>คนคนละคน</strong> → เพิ่ม middle name หรือหมายเหตุเพื่อแยกความแตกต่าง</li>
+                                <li>ตรวจสอบ<strong>บัตรประชาชน</strong>เพื่อยืนยันว่าเป็นคนเดียวกันหรือไม่</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Tab 2: บัตรประชาชนซ้ำ -->
+        <div class="tab-pane fade" id="national-id" role="tabpanel">
+            {% if unique_national_id_duplicate_groups == 0 %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i> <strong>ไม่พบบัตรประชาชนซ้ำ</strong> - ข้อมูลสะอาดแล้ว!
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-octagon-fill"></i>
+                <strong>พบบัตรประชาชนซ้ำ {{ unique_national_id_duplicate_groups }} กลุ่ม</strong> (รวม {{ total_national_id_duplicates }} รายการ)
+                - <strong>ต้องแก้ไขทันที!</strong> บัตรประชาชนซ้ำหมายถึงมีข้อมูลผิดพลาดหรือคนเดียวกันลงทะเบียนหลายครั้ง
+            </div>
+
+            {% for group in national_id_duplicate_groups %}
+            <div class="duplicate-group-card">
+                <div class="duplicate-header national-id-group" data-bs-toggle="collapse" data-bs-target="#collapse-national-{{ forloop.counter }}">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-0">
+                                <i class="bi bi-credit-card-2-front text-warning"></i> บัตรประชาชน: {{ group.national_id }}
+                            </h5>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="badge bg-warning text-dark">พบ {{ group.count }} รายการ</span>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <i class="bi bi-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="collapse" id="collapse-national-{{ forloop.counter }}">
+                    <div class="duplicate-body">
+                        <div class="row">
+                            {% for profile in group.profiles %}
+                            <div class="col-md-6 mb-3">
+                                <div class="profile-item">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0">
+                                            <a href="{% url 'registry:staff_detail' profile.id %}" target="_blank">
+                                                {{ profile.full_name }}
+                                                <i class="bi bi-box-arrow-up-right small"></i>
+                                            </a>
+                                        </h6>
+                                        <span class="badge-pill" style="background-color: {{ profile.badge_type.color_code }}; color: white;">
+                                            {{ profile.badge_type.name }}
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted">
+                                        <div><i class="bi bi-building"></i> หน่วยงาน: {{ profile.department.name }}</div>
+                                        <div><i class="bi bi-briefcase"></i> ตำแหน่ง: {{ profile.position }}</div>
+                                        {% if profile.zone %}
+                                        <div><i class="bi bi-geo-alt"></i> โซน: {{ profile.zone.code }}</div>
+                                        {% endif %}
+                                        <div><i class="bi bi-envelope"></i> อีเมล: {{ profile.email|default:"ไม่ระบุ" }}</div>
+                                        <div><i class="bi bi-telephone"></i> โทร: {{ profile.phone|default:"ไม่ระบุ" }}</div>
+                                        {% if profile.badge_request %}
+                                        <div class="mt-2">
+                                            <span class="badge bg-secondary">{{ profile.badge_request.get_status_display }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-2">
+                                        <a href="{% url 'registry:staff_detail' profile.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> ดูข้อมูล
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="alert alert-danger mt-3 mb-0">
+                            <strong><i class="bi bi-exclamation-triangle-fill"></i> ต้องดำเนินการ:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>ตรวจสอบว่าเป็นคนเดียวกันหรือไม่</strong></li>
+                                <li>ถ้าเป็นคนเดียวกัน → <strong>ลบรายการซ้ำทันที</strong> (เหลือ 1 รายการ)</li>
+                                <li>ถ้าไม่ใช่คนเดียวกัน → <strong>แก้ไขเลขบัตรประชาชนให้ถูกต้อง</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Tab 3: ไม่มีบัตรประชาชน -->
+        <div class="tab-pane fade" id="no-national-id" role="tabpanel">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle-fill"></i>
+                <strong>พบบุคลากรที่ไม่มีบัตรประชาชน {{ total_no_national_id }} คน</strong>
+                - ระวังอาจมีชื่อซ้ำ เพราะไม่สามารถเช็คซ้ำจากบัตรประชาชนได้
+            </div>
+
+            <!-- Filter -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <input type="hidden" name="tab" value="no-national-id">
+                        <div class="col-md-4">
+                            <label class="form-label">กรองตามหน่วยงาน</label>
+                            <select name="department" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if department_filter == dept.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ dept.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-filter"></i> กรอง
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Table -->
+            {% if total_no_national_id == 0 %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i> <strong>ทุกคนมีบัตรประชาชนแล้ว!</strong>
+            </div>
+            {% else %}
+            <div class="no-national-id-table">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ลำดับ</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>หน่วยงาน</th>
+                            <th>ตำแหน่ง</th>
+                            <th>ประเภทบัตร</th>
+                            <th>สถานะ</th>
+                            <th>การกระทำ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for profile in no_national_id_profiles %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ profile.full_name }}</strong>
+                            </td>
+                            <td>{{ profile.department.name }}</td>
+                            <td><small>{{ profile.position }}</small></td>
+                            <td>
+                                <span class="badge-pill" style="background-color: {{ profile.badge_type.color_code }}; color: white;">
+                                    {{ profile.badge_type.name }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if profile.badge_request %}
+                                <span class="badge bg-secondary">{{ profile.badge_request.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">ไม่มีคำขอ</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'registry:staff_detail' profile.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> ดูข้อมูล
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab 4: ไม่มีรูปถ่าย -->
+        <div class="tab-pane fade" id="no-photo" role="tabpanel">
+            <div class="alert alert-warning">
+                <i class="bi bi-camera-fill"></i>
+                <strong>พบบัตรชมพู/แดงที่ไม่มีรูปถ่าย {{ total_no_photo }} คน</strong>
+                - บัตรชมพูและแดงจำเป็นต้องมีรูปถ่าย กรุณาอัปโหลดรูปก่อนส่งคำขอ
+            </div>
+
+            <!-- Filter -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <input type="hidden" name="tab" value="no-photo">
+                        <div class="col-md-4">
+                            <label class="form-label">กรองตามหน่วยงาน</label>
+                            <select name="department_photo" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if department_filter_photo == dept.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ dept.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-filter"></i> กรอง
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Table -->
+            {% if total_no_photo == 0 %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i> <strong>ทุกคนมีรูปถ่ายแล้ว!</strong>
+            </div>
+            {% else %}
+            <div class="no-national-id-table">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ลำดับ</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>หน่วยงาน</th>
+                            <th>ตำแหน่ง</th>
+                            <th>ประเภทบัตร</th>
+                            <th>สถานะ</th>
+                            <th>การกระทำ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for profile in no_photo_profiles %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ profile.full_name }}</strong>
+                            </td>
+                            <td>{{ profile.department.name }}</td>
+                            <td><small>{{ profile.position }}</small></td>
+                            <td>
+                                <span class="badge-pill" style="background-color: {{ profile.badge_type.color_code }}; color: white;">
+                                    {{ profile.badge_type.name }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if profile.badge_request %}
+                                <span class="badge bg-secondary">{{ profile.badge_request.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">ไม่มีคำขอ</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'registry:staff_detail' profile.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> ดูข้อมูล
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// เก็บ active tab ใน URL
+document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function (event) {
+        const url = new URL(window.location);
+        url.searchParams.set('tab', event.target.id.replace('-tab', ''));
+        window.history.pushState({}, '', url);
+    });
+});
+
+// Load active tab จาก URL
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+
+    if (activeTab) {
+        const tabButton = document.getElementById(activeTab + '-tab');
+        if (tabButton) {
+            new bootstrap.Tab(tabButton).show();
+        }
+    }
+});
+</script>
+{% endblock %}

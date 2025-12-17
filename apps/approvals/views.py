@@ -33,9 +33,18 @@ def get_client_ip(request):
 @officer_required
 def pending_list(request):
     """หน้ารอตรวจสอบ - รายการที่ส่งมาแล้ว"""
-    # Get all requests (status = submitted, under_review)
+    from apps.accounts.models import Department
+
+    # Get filter parameters
+    department_filter = request.GET.get('department', '')
+
+    # Get all departments for filter dropdown
+    departments = Department.objects.filter(is_active=True).order_by('name')
+
+    # Get all requests (status = submitted, under_review) - เฉพาะหน่วยงานที่เปิดใช้งาน
     base_queryset = BadgeRequest.objects.filter(
-        status__in=['submitted', 'under_review']
+        status__in=['submitted', 'under_review'],
+        staff_profile__department__is_active=True
     ).select_related(
         'staff_profile__department',
         'staff_profile__badge_type',
@@ -43,12 +52,16 @@ def pending_list(request):
         'created_by'
     )
 
+    # Filter by department
+    if department_filter:
+        base_queryset = base_queryset.filter(staff_profile__department_id=department_filter)
+
     # Search
     search = request.GET.get('search', '')
     if search:
         base_queryset = base_queryset.filter(
-            Q(staff_profile__first_name__icontains=search) |
-            Q(staff_profile__last_name__icontains=search) |
+            Q(staff_profile__first_line__icontains=search) |
+            Q(staff_profile__last_line__icontains=search) |
             Q(staff_profile__position__icontains=search) |
             Q(staff_profile__national_id__icontains=search)
         )
@@ -70,16 +83,21 @@ def pending_list(request):
     # แยกข้อมูลตามประเภทบัตร
     badge_data = []
     for badge_type in badge_types:
-        # ดึงทั้งหมดที่ส่งมาแล้ว (submitted + under_review + approved)
+        # ดึงทั้งหมดที่ส่งมาแล้ว (submitted + under_review + approved) - เฉพาะหน่วยงานที่เปิดใช้งาน
         all_submitted = BadgeRequest.objects.filter(
             staff_profile__badge_type=badge_type,
+            staff_profile__department__is_active=True,
             status__in=['submitted', 'under_review', 'approved']
         ).select_related('staff_profile__department', 'staff_profile__zone', 'created_by')
 
+        # Filter by department
+        if department_filter:
+            all_submitted = all_submitted.filter(staff_profile__department_id=department_filter)
+
         if search:
             all_submitted = all_submitted.filter(
-                Q(staff_profile__first_name__icontains=search) |
-                Q(staff_profile__last_name__icontains=search) |
+                Q(staff_profile__first_line__icontains=search) |
+                Q(staff_profile__last_line__icontains=search) |
                 Q(staff_profile__position__icontains=search) |
                 Q(staff_profile__national_id__icontains=search)
             )
@@ -109,6 +127,8 @@ def pending_list(request):
         'badge_data': badge_data,
         'active_badge_id': active_badge_id,
         'search': search,
+        'departments': departments,
+        'department_filter': department_filter,
     }
 
     return render(request, 'approvals/pending_list.html', context)
@@ -141,11 +161,39 @@ def review_detail(request, request_id):
         badge_request=badge_request
     ).select_related('performed_by').order_by('-performed_at')
 
+    # Get badge number info for all badge types (เหมือนหน้า approved_list)
+    from apps.badges.models import BadgeType, Badge
+    from apps.badges.utils import get_next_badge_number
+    from django.db.models import Case, When, IntegerField
+
+    badge_order = Case(
+        When(name='บัตรชมพู', then=1),
+        When(name='บัตรแดง', then=2),
+        When(name='บัตรเหลือง', then=3),
+        When(name='บัตรเขียว', then=4),
+        default=5,
+        output_field=IntegerField(),
+    )
+    badge_types = BadgeType.objects.filter(is_active=True).order_by(badge_order)
+
+    badge_info = []
+    for badge_type in badge_types:
+        latest_badge = Badge.objects.filter(badge_type=badge_type).order_by('-created_at').first()
+        latest_badge_number = latest_badge.badge_number if latest_badge else '-'
+        next_badge_number = get_next_badge_number(badge_type)
+
+        badge_info.append({
+            'badge_type': badge_type,
+            'latest_badge_number': latest_badge_number,
+            'next_badge_number': next_badge_number,
+        })
+
     context = {
         'badge_request': badge_request,
         'staff_profile': badge_request.staff_profile,
         'photo': photo,
         'approval_logs': approval_logs,
+        'badge_info': badge_info,
     }
 
     return render(request, 'approvals/review_detail.html', context)
@@ -238,8 +286,18 @@ def reject_request(request, request_id):
 @officer_required
 def approved_list(request):
     """หน้ารายการที่อนุมัติแล้ว"""
-    # Search
+    from apps.accounts.models import Department
+
+    # Get filter parameters
+    department_filter = request.GET.get('department', '')
     search = request.GET.get('search', '')
+
+    # Get all departments for filter dropdown
+    departments = Department.objects.filter(is_active=True).order_by('name')
+
+    # Get all zones for bulk edit dropdown
+    from apps.registry.models import Zone
+    zones = Zone.objects.filter(is_active=True).order_by('code')
 
     # Get all badge types (เรียงตามลำดับ: ชมพู แดง เหลือง เขียว)
     from apps.badges.models import BadgeType
@@ -258,16 +316,21 @@ def approved_list(request):
     # แยกข้อมูลตามประเภทบัตร
     badge_data = []
     for badge_type in badge_types:
-        # ดึงทั้งหมดที่อนุมัติแล้ว (approved + badge_created + printed + completed)
+        # ดึงทั้งหมดที่อนุมัติแล้ว (approved + badge_created + printed + completed) - เฉพาะหน่วยงานที่เปิดใช้งาน
         all_approved = BadgeRequest.objects.filter(
             staff_profile__badge_type=badge_type,
+            staff_profile__department__is_active=True,
             status__in=['approved', 'badge_created', 'printed', 'completed']
         ).select_related('staff_profile__department', 'staff_profile__zone', 'approved_by')
 
+        # Filter by department
+        if department_filter:
+            all_approved = all_approved.filter(staff_profile__department_id=department_filter)
+
         if search:
             all_approved = all_approved.filter(
-                Q(staff_profile__first_name__icontains=search) |
-                Q(staff_profile__last_name__icontains=search) |
+                Q(staff_profile__first_line__icontains=search) |
+                Q(staff_profile__last_line__icontains=search) |
                 Q(staff_profile__position__icontains=search) |
                 Q(staff_profile__national_id__icontains=search)
             )
@@ -281,11 +344,21 @@ def approved_list(request):
         ).count()
         total_count = all_approved.count()
 
+        # หาเลขบัตรล่าสุดและเลขบัตรถัดไป
+        from apps.badges.models import Badge
+        from apps.badges.utils import get_next_badge_number
+
+        latest_badge = Badge.objects.filter(badge_type=badge_type).order_by('-created_at').first()
+        latest_badge_number = latest_badge.badge_number if latest_badge else '-'
+        next_badge_number = get_next_badge_number(badge_type)
+
         badge_data.append({
             'badge_type': badge_type,
             'requests': pending_badge_creation,
             'badge_created_count': badge_created_count,
             'total_count': total_count,
+            'latest_badge_number': latest_badge_number,
+            'next_badge_number': next_badge_number,
         })
 
     # Tab ที่เลือก (default = บัตรแรก)
@@ -297,9 +370,110 @@ def approved_list(request):
         'badge_data': badge_data,
         'active_badge_id': active_badge_id,
         'search': search,
+        'departments': departments,
+        'department_filter': department_filter,
+        'zones': zones,
     }
 
     return render(request, 'approvals/approved_list.html', context)
+
+
+@login_required
+@officer_required
+def bulk_edit_approved(request):
+    """แก้ไขข้อมูลหลายรายการพร้อมกัน (approved list)"""
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method')
+        return redirect('approvals:approved_list')
+
+    # Get request IDs
+    request_ids = request.POST.getlist('request_ids')
+    if not request_ids:
+        messages.error(request, 'กรุณาเลือกรายการที่ต้องการแก้ไข')
+        return redirect('approvals:approved_list')
+
+    # Get new values
+    new_position = request.POST.get('position', '').strip()
+    new_zone_id = request.POST.get('zone_id', '').strip()
+
+    # Check if at least one field is provided
+    if not new_position and not new_zone_id:
+        messages.warning(request, 'กรุณาระบุข้อมูลที่ต้องการเปลี่ยนแปลง')
+        return redirect('approvals:approved_list')
+
+    from apps.registry.models import StaffProfile, Zone
+    from apps.approvals.models import ApprovalLog
+    from django.db import transaction
+
+    success_count = 0
+    error_count = 0
+    error_messages = []
+
+    # Process each request
+    for request_id in request_ids:
+        try:
+            with transaction.atomic():
+                # Get badge request
+                badge_request = BadgeRequest.objects.select_related('staff_profile').get(pk=request_id)
+                staff_profile = badge_request.staff_profile
+
+                # Store old values for logging
+                old_position = staff_profile.position
+                old_zone = staff_profile.zone
+
+                # Update position if provided
+                if new_position:
+                    staff_profile.position = new_position
+
+                # Update zone if provided
+                if new_zone_id:
+                    try:
+                        new_zone = Zone.objects.get(pk=new_zone_id, is_active=True)
+                        staff_profile.zone = new_zone
+                    except Zone.DoesNotExist:
+                        error_count += 1
+                        error_messages.append(f'{staff_profile.full_name}: โซนที่เลือกไม่ถูกต้อง')
+                        continue
+
+                # Save changes
+                staff_profile.save()
+
+                # Create approval log
+                changes = []
+                if new_position and old_position != new_position:
+                    changes.append(f'ตำแหน่ง: {old_position} → {new_position}')
+                if new_zone_id and old_zone != staff_profile.zone:
+                    old_zone_text = f'{old_zone.code} - {old_zone.name}' if old_zone else '-'
+                    new_zone_text = f'{staff_profile.zone.code} - {staff_profile.zone.name}'
+                    changes.append(f'โซน: {old_zone_text} → {new_zone_text}')
+
+                if changes:
+                    comment = 'แก้ไขข้อมูล (bulk edit): ' + ', '.join(changes)
+                    ApprovalLog.objects.create(
+                        badge_request=badge_request,
+                        action='edit',
+                        performed_by=request.user,
+                        comment=comment,
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+
+                success_count += 1
+
+        except BadgeRequest.DoesNotExist:
+            error_count += 1
+            error_messages.append(f'ไม่พบคำขอ ID: {request_id}')
+        except Exception as e:
+            error_count += 1
+            error_messages.append(f'เกิดข้อผิดพลาด: {str(e)}')
+
+    # Show messages
+    if success_count > 0:
+        messages.success(request, f'แก้ไขข้อมูลสำเร็จ {success_count} รายการ')
+    if error_count > 0:
+        for error_msg in error_messages:
+            messages.warning(request, error_msg)
+
+    return redirect('approvals:approved_list')
 
 
 @login_required
@@ -319,8 +493,8 @@ def rejected_list(request):
     search = request.GET.get('search', '')
     if search:
         requests = requests.filter(
-            Q(staff_profile__first_name__icontains=search) |
-            Q(staff_profile__last_name__icontains=search) |
+            Q(staff_profile__first_line__icontains=search) |
+            Q(staff_profile__last_line__icontains=search) |
             Q(staff_profile__position__icontains=search)
         )
 
@@ -470,8 +644,8 @@ def approval_history(request):
     search = request.GET.get('search', '')
     if search:
         logs = logs.filter(
-            Q(badge_request__staff_profile__first_name__icontains=search) |
-            Q(badge_request__staff_profile__last_name__icontains=search) |
+            Q(badge_request__staff_profile__first_line__icontains=search) |
+            Q(badge_request__staff_profile__last_line__icontains=search) |
             Q(performed_by__first_name__icontains=search) |
             Q(performed_by__last_name__icontains=search)
         )

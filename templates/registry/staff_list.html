@@ -10,10 +10,10 @@
             <h2><i class="bi bi-people-fill"></i> รายการบุคลากร</h2>
         </div>
         <div class="col-md-6 text-end">
-            <a href="{% url 'registry:staff_import_upload' %}" class="btn btn-success me-2">
+            <a href="{% url 'registry:staff_import_upload' %}" class="btn btn-outline-secondary me-2">
                 <i class="bi bi-file-earmark-excel"></i> นำเข้าจาก Excel
             </a>
-            <a href="{% url 'registry:wizard_step1' %}" class="btn btn-primary">
+            <a href="{% url 'registry:wizard_step1' %}" class="btn btn-success">
                 <i class="bi bi-person-plus-fill"></i> ลงทะเบียนบุคลากรใหม่
             </a>
         </div>
@@ -33,7 +33,7 @@
                             role="tab"
                             style="background-color: {{ data.badge_type.color_code }}; border-color: {{ data.badge_type.color_code }}; color: black; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
                         {{ data.badge_type.name }}
-                        <span class="badge bg-light text-dark ms-1">{{ data.submitted_count }}/{{ data.total_count }}</span>
+                        <span class="badge bg-light text-dark ms-1">📤 ส่งแล้ว {{ data.submitted_count }}/{{ data.total_count }} คน</span>
                     </button>
                 </li>
                 {% endfor %}
@@ -41,20 +41,60 @@
         </div>
     </div>
 
-    <!-- Search -->
-    <div class="row mb-4">
-        <div class="col-md-6">
+    <!-- Search and Filters -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
             <form method="get" class="input-group">
-                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ, นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ-นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                {% if department_filter %}
+                <input type="hidden" name="department" value="{{ department_filter }}">
+                {% endif %}
                 <button class="btn btn-outline-primary" type="submit">
                     <i class="bi bi-search"></i> ค้นหา
                 </button>
-                {% if search %}
+                {% if search or department_filter %}
                 <a href="{% url 'registry:staff_list' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-x"></i> ล้าง
                 </a>
                 {% endif %}
             </form>
+        </div>
+        <div class="col-md-4">
+            <form method="get" id="department-filter-form">
+                {% if search %}
+                <input type="hidden" name="search" value="{{ search }}">
+                {% endif %}
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                    <select class="form-select" name="department" onchange="this.form.submit()">
+                        <option value="">-- ทุกหน่วยงาน --</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if dept.id|stringformat:'s' == department_filter %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-funnel"></i></span>
+                <select class="form-select filter-status-select" id="status-filter">
+                    <option value="all">ทั้งหมด</option>
+                    <option value="no_request">ยังไม่สร้างคำขอ</option>
+                    <option value="draft">ร่าง</option>
+                    <option value="photo_uploaded">อัปโหลดรูปแล้ว</option>
+                    <option value="ready_to_submit">พร้อมส่ง</option>
+                    <option value="submitted">ส่งแล้ว</option>
+                    <option value="under_review">กำลังตรวจสอบ</option>
+                    <option value="approved">อนุมัติแล้ว</option>
+                    <option value="rejected">ปฏิเสธ</option>
+                    <option value="badge_created">สร้างบัตรแล้ว</option>
+                    <option value="printed">พิมพ์แล้ว</option>
+                    <option value="completed">เสร็จสิ้น</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -66,8 +106,11 @@
                     <span id="selected-count" class="fw-bold">0</span> รายการที่เลือก
                 </div>
                 <div class="col-md-6 text-end">
-                    <button type="button" class="btn btn-success" id="bulk-submit-btn">
+                    <button type="button" class="btn btn-success me-2" id="bulk-submit-btn">
                         <i class="bi bi-send"></i> ส่งคำขอที่เลือก
+                    </button>
+                    <button type="button" class="btn btn-danger" id="bulk-delete-btn">
+                        <i class="bi bi-trash"></i> ลบรายการที่เลือก
                     </button>
                 </div>
             </div>
@@ -91,18 +134,20 @@
                                     <th width="30">
                                         <input type="checkbox" class="form-check-input select-all-badge" data-badge-id="{{ data.badge_type.id }}">
                                     </th>
-                                    <th width="12%">ยศ</th>
                                     <th width="18%">ชื่อ-นามสกุล</th>
                                     <th width="12%">บัตรประชาชน</th>
-                                    <th width="18%">ตำแหน่ง</th>
-                                    <th width="12%">ประเภทบัตร</th>
+                                    <th width="15%">ตำแหน่ง</th>
+                                    <th width="10%">ประเภทบัตร</th>
+                                    <th width="12%">โซน</th>
                                     <th width="10%">สถานะ</th>
                                     <th width="10%" class="text-center">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody data-badge-id="{{ data.badge_type.id }}">
                                 {% for staff in data.staff_profiles %}
-                                <tr>
+                                <tr class="staff-row" data-status="{% if staff.badge_request %}{{ staff.badge_request.status }}{% else %}no_request{% endif %}"
+                                    data-badge-id="{{ data.badge_type.id }}"
+                                    data-search-text="{{ staff.first_line }} {{ staff.last_line }} {{ staff.position }} {{ staff.national_id|default:'' }}">
                                     <td>
                                         {% if not staff.badge_request %}
                                         <input type="checkbox" class="form-check-input staff-checkbox" data-badge-id="{{ data.badge_type.id }}" value="{{ staff.id }}">
@@ -110,9 +155,9 @@
                                         <input type="checkbox" class="form-check-input staff-checkbox" data-badge-id="{{ data.badge_type.id }}" value="{{ staff.id }}">
                                         {% endif %}
                                     </td>
-                                    <td>{{ staff.title }}</td>
                                     <td>
-                                        <strong>{{ staff.first_name }} {{ staff.last_name }}</strong>
+                                        <strong>{{ staff.first_line }} {{ staff.last_line }}</strong>
+                                        <small class="text-muted d-block">{{ staff.department.name }}</small>
                                     </td>
                                     <td class="small">{{ staff.national_id|default:"-" }}</td>
                                     <td>{{ staff.position }}</td>
@@ -120,6 +165,14 @@
                                         <span class="badge" style="background-color: {{ staff.badge_type.color_code }};">
                                             {{ staff.badge_type.name }}
                                         </span>
+                                    </td>
+                                    <td>
+                                        {% if staff.zone %}
+                                            <span class="badge bg-secondary">{{ staff.zone.code }}</span>
+                                            <small class="text-muted d-block">{{ staff.zone.name }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if staff.badge_request %}
@@ -152,10 +205,18 @@
                                             </a>
                                             {% endif %}
 
-                                            {% if staff.badge_request and staff.badge_request.status == 'ready_to_submit' %}
-                                            <a href="{% url 'registry:wizard_submit' staff.badge_request.id %}" class="btn btn-outline-success" title="ส่งคำขอ">
-                                                <i class="bi bi-send"></i>
-                                            </a>
+                                            {% if staff.badge_request %}
+                                                {% if staff.badge_request.status == 'ready_to_submit' or staff.badge_request.status == 'rejected' or staff.badge_request.status == 'photo_uploaded' %}
+                                                <a href="{% url 'registry:wizard_submit' staff.badge_request.id %}" class="btn btn-outline-success" title="ส่งคำขอ">
+                                                    <i class="bi bi-send"></i>
+                                                </a>
+                                                {% elif staff.badge_request.status == 'draft' %}
+                                                    {% if not staff.badge_type.requires_photo %}
+                                                    <a href="{% url 'registry:wizard_submit' staff.badge_request.id %}" class="btn btn-outline-success" title="ส่งคำขอ">
+                                                        <i class="bi bi-send"></i>
+                                                    </a>
+                                                    {% endif %}
+                                                {% endif %}
                                             {% endif %}
                                         </div>
                                     </td>
@@ -174,7 +235,7 @@
                                 ยังไม่มีข้อมูลบุคลากร
                             {% endif %}
                         </h5>
-                        <a href="{% url 'registry:wizard_step1' %}" class="btn btn-primary mt-3">
+                        <a href="{% url 'registry:wizard_step1' %}" class="btn btn-success mt-3">
                             <i class="bi bi-person-plus-fill"></i> เริ่มลงทะเบียน
                         </a>
                     </div>
@@ -273,6 +334,36 @@
 </div>
 {% endif %}
 
+<!-- Bulk Delete Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-trash"></i> ลบรายการที่เลือก</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-delete-form" action="{% url 'registry:bulk_delete' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        คุณกำลังลบ <strong><span id="bulk-delete-count">0</span></strong> รายการ
+                    </div>
+                    <p class="text-danger"><strong>คำเตือน:</strong> การลบข้อมูลนี้ไม่สามารถย้อนกลับได้</p>
+                    <p>รายการที่อนุมัติแล้ว หรือสร้างบัตรแล้ว จะไม่ถูกลบ</p>
+                    <p>คุณต้องการดำเนินการต่อหรือไม่?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> ยืนยันการลบ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Show error modal if exists
@@ -286,11 +377,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const bulkSubmitBtn = document.getElementById('bulk-submit-btn');
     const tabButtons = document.querySelectorAll('[data-bs-toggle="pill"]');
 
-    // Function to get active tab's checkboxes
+    // Function to get active tab's checkboxes (only visible ones)
     function getActiveTabCheckboxes() {
         const activeTab = document.querySelector('.tab-pane.active');
         if (!activeTab) return [];
-        return activeTab.querySelectorAll('.staff-checkbox');
+        const allCheckboxes = activeTab.querySelectorAll('.staff-checkbox');
+        // Filter only visible checkboxes
+        return Array.from(allCheckboxes).filter(cb => {
+            const row = cb.closest('tr');
+            return row && row.style.display !== 'none';
+        });
     }
 
     // Function to get active tab's select-all checkbox
@@ -327,8 +423,14 @@ document.addEventListener('DOMContentLoaded', function() {
         allSelectAllCheckboxes.forEach(selectAll => {
             selectAll.addEventListener('change', function() {
                 const badgeId = this.getAttribute('data-badge-id');
-                const tabCheckboxes = document.querySelectorAll(`.staff-checkbox[data-badge-id="${badgeId}"]`);
-                tabCheckboxes.forEach(cb => cb.checked = this.checked);
+                const allTabCheckboxes = document.querySelectorAll(`.staff-checkbox[data-badge-id="${badgeId}"]`);
+                // Only select/deselect visible checkboxes
+                allTabCheckboxes.forEach(cb => {
+                    const row = cb.closest('tr');
+                    if (row && row.style.display !== 'none') {
+                        cb.checked = this.checked;
+                    }
+                });
                 updateBulkActions();
             });
         });
@@ -373,7 +475,140 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Bulk delete
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', function() {
+            const checkboxes = getActiveTabCheckboxes();
+            const selected = Array.from(checkboxes).filter(cb => cb.checked);
+            document.getElementById('bulk-delete-count').textContent = selected.length;
+
+            const form = document.getElementById('bulk-delete-form');
+            // Clear previous hidden inputs
+            form.querySelectorAll('input[name="staff_ids"]').forEach(input => input.remove());
+
+            // Add selected IDs
+            selected.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'staff_ids';
+                input.value = cb.value;
+                form.appendChild(input);
+            });
+
+            new bootstrap.Modal(document.getElementById('bulkDeleteModal')).show();
+        });
+    }
+
+    // Tab Memory with localStorage
+    function initTabMemory() {
+        // Listen to all tab button clicks (note: this page uses "pill" not "tab")
+        document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function(event) {
+                // Extract badge type ID from tab target
+                const target = event.target.getAttribute('data-bs-target');
+                const badgeTypeId = target.replace('#badge-', '');
+
+                // Save to localStorage
+                localStorage.setItem('staff_list_active_tab', badgeTypeId);
+                console.log('Saved active tab (staff list):', badgeTypeId);
+            });
+        });
+    }
+
+    function restoreActiveTab() {
+        // Get saved tab from localStorage
+        const savedTab = localStorage.getItem('staff_list_active_tab');
+
+        if (savedTab) {
+            // Find and activate the saved tab
+            const tabButton = document.getElementById('badge-' + savedTab + '-tab');
+            if (tabButton) {
+                const tab = new bootstrap.Tab(tabButton);
+                tab.show();
+                console.log('Restored active tab (staff list):', savedTab);
+            }
+        }
+    }
+
+    // Filter status functionality
+    function applyStatusFilter() {
+        const filterSelect = document.getElementById('status-filter');
+        const selectedStatus = filterSelect.value;
+
+        // Get active tab
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (!activeTab) return;
+
+        // Get all rows in active tab
+        const rows = activeTab.querySelectorAll('.staff-row');
+        let visibleCount = 0;
+
+        rows.forEach(function(row) {
+            const rowStatus = row.getAttribute('data-status');
+
+            // Show/hide based on filter
+            if (selectedStatus === 'all' || rowStatus === selectedStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show "no results" message if needed
+        const tbody = activeTab.querySelector('tbody');
+        let noResultsMsg = tbody.querySelector('.no-results-message');
+
+        if (visibleCount === 0) {
+            if (!noResultsMsg) {
+                const tr = document.createElement('tr');
+                tr.className = 'no-results-message';
+                tr.innerHTML = '<td colspan="9" class="text-center py-5"><div class="alert alert-warning mb-0"><i class="bi bi-info-circle"></i> ไม่พบรายการตามเงื่อนไขที่เลือก</div></td>';
+                tbody.appendChild(tr);
+            }
+        } else {
+            if (noResultsMsg) {
+                noResultsMsg.remove();
+            }
+        }
+
+        // Update bulk actions after filter
+        updateBulkActions();
+    }
+
+    // Setup filter dropdown
+    function setupStatusFilter() {
+        const filterSelect = document.getElementById('status-filter');
+        if (filterSelect) {
+            // Restore saved filter from localStorage
+            const savedFilter = localStorage.getItem('staff_list_status_filter');
+            if (savedFilter) {
+                filterSelect.value = savedFilter;
+            }
+
+            filterSelect.addEventListener('change', function() {
+                // Save to localStorage
+                localStorage.setItem('staff_list_status_filter', this.value);
+                applyStatusFilter();
+            });
+
+            // Apply initial filter
+            applyStatusFilter();
+        }
+
+        // Re-apply filter when switching tabs
+        tabButtons.forEach(button => {
+            button.addEventListener('shown.bs.tab', function() {
+                applyStatusFilter();
+            });
+        });
+    }
+
     // Initialize
+    initTabMemory();
+    restoreActiveTab();
+    setupStatusFilter();
     setupSelectAll();
     setupCheckboxes();
     updateBulkActions();

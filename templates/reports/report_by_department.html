@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load report_filters %}
+
+{% block title %}รายงานตามหน่วยงาน{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="bi bi-building"></i> รายงานตามหน่วยงาน</h2>
+            <p class="text-muted">สรุปข้อมูลบุคลากรและบัตรแยกตามหน่วยงาน</p>
+        </div>
+    </div>
+
+    <!-- Top 5 หน่วยงาน -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header badge-header-pink">
+                    <strong><i class="bi bi-trophy-fill"></i> Top 5 หน่วยงานที่มีบุคลากรมากที่สุด</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for stat in top_5_departments %}
+                        <div class="col-md-2">
+                            <div class="text-center p-3 border rounded">
+                                <div class="mb-2">
+                                    <i class="bi bi-building-fill" style="font-size: 2rem; color: #A78BFA;"></i>
+                                </div>
+                                <h4 style="color: #6D28D9;">{{ stat.total }}</h4>
+                                <small class="text-muted">{{ stat.department.name }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ตารางสรุปทุกหน่วยงาน -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header badge-header-green">
+                    <strong><i class="bi bi-table"></i> สรุปทุกหน่วยงาน</strong>
+                </div>
+                <div class="card-body">
+                    {% if departments_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr class="text-center">
+                                    <th rowspan="2" class="align-middle" width="5%">#</th>
+                                    <th rowspan="2" class="align-middle" width="25%">หน่วยงาน</th>
+                                    <th rowspan="2" class="align-middle" width="10%">ทั้งหมด</th>
+                                    <th colspan="4" class="align-middle">ประเภทบัตร</th>
+                                    <th rowspan="2" class="align-middle" width="10%">อนุมัติแล้ว</th>
+                                    <th rowspan="2" class="align-middle" width="10%">รอดำเนินการ</th>
+                                    <th rowspan="2" class="align-middle" width="12%">รายงาน</th>
+                                </tr>
+                                <tr class="text-center">
+                                    {% for bt in badge_types %}
+                                    <th class="badge-header-{{ bt.color }}" width="8%">{{ bt.name }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in departments_stats %}
+                                <tr>
+                                    <td class="text-center">{{ forloop.counter }}</td>
+                                    <td><strong>{{ stat.department.name }}</strong></td>
+                                    <td class="text-center"><strong>{{ stat.total }}</strong></td>
+
+                                    <!-- จำนวนแต่ละประเภทบัตร -->
+                                    {% for bt in badge_types %}
+                                    <td class="text-center">
+                                        {% with count=stat.badge_counts|get_item:bt.color %}
+                                            {{ count|default:0 }}
+                                        {% endwith %}
+                                    </td>
+                                    {% endfor %}
+
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ stat.approved }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-warning text-dark">{{ stat.pending }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'reports:badge_receipt_pdf' stat.department.id %}"
+                                           class="btn btn-sm btn-outline-primary"
+                                           target="_blank"
+                                           title="พิมพ์ใบเซ็นรับบัตร">
+                                            <i class="bi bi-file-pdf"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="2" class="text-end">รวมทั้งหมด:</th>
+                                    <th class="text-center">
+                                        {{ departments_stats|sum_attr:'total' }}
+                                    </th>
+                                    {% for bt in badge_types %}
+                                    <th class="text-center">
+                                        {{ departments_stats|sum_badge_counts:bt.color }}
+                                    </th>
+                                    {% endfor %}
+                                    <th class="text-center">
+                                        {{ departments_stats|sum_attr:'approved' }}
+                                    </th>
+                                    <th class="text-center">
+                                        {{ departments_stats|sum_attr:'pending' }}
+                                    </th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                        <p class="mt-3">ไม่มีข้อมูลหน่วยงาน</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// เพิ่ม custom filter สำหรับการเข้าถึง dict
+</script>
+{% endblock %}

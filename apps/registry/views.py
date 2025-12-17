@@ -25,26 +25,44 @@ def admin_required(view_func):
 @login_required
 def staff_list(request):
     """รายการบุคลากร - แบ่งตาม Tab ประเภทบัตร"""
+    from apps.accounts.models import Department
     user = request.user
+
+    # Get department filter parameter
+    department_filter = request.GET.get('department', '')
+
+    # Get all departments for filter dropdown
+    departments = Department.objects.filter(is_active=True).order_by('name')
 
     # Filter by department for submitters
     if user.role == 'submitter':
-        base_queryset = StaffProfile.objects.filter(department=user.department).select_related(
+        base_queryset = StaffProfile.objects.filter(
+            department=user.department,
+            department__is_active=True
+        ).select_related(
             'badge_type', 'department', 'badge_request'
         )
     else:
-        base_queryset = StaffProfile.objects.all().select_related(
+        base_queryset = StaffProfile.objects.filter(
+            department__is_active=True
+        ).select_related(
             'badge_type', 'department', 'badge_request'
         )
+
+    # Filter by department (for admin/officer)
+    if department_filter and user.role != 'submitter':
+        base_queryset = base_queryset.filter(department_id=department_filter)
 
     # Search
     search = request.GET.get('search', '')
     if search:
         base_queryset = base_queryset.filter(
-            Q(first_name__icontains=search) |
-            Q(last_name__icontains=search) |
+            Q(first_line__icontains=search) |
+            Q(last_line__icontains=search) |
+            Q(display_name__icontains=search) |
             Q(position__icontains=search) |
-            Q(national_id__icontains=search)
+            Q(national_id__icontains=search) |
+            Q(department__name__icontains=search)
         )
 
     # Get all badge types (เรียงตามลำดับ: ชมพู แดง เหลือง เขียว)
@@ -62,7 +80,7 @@ def staff_list(request):
     # แยกข้อมูลตามประเภทบัตร
     badge_data = []
     for badge_type in badge_types:
-        staff_list = base_queryset.filter(badge_type=badge_type).order_by('-created_at')
+        staff_list = base_queryset.filter(badge_type=badge_type).order_by('department__name', 'zone__code', '-created_at')
         total_count = staff_list.count()
 
         # นับจำนวนที่ส่งแล้ว (status = submitted, under_review, approved, badge_created, printed, completed)
@@ -90,6 +108,8 @@ def staff_list(request):
         'badge_data': badge_data,
         'active_badge_id': active_badge_id,
         'search': search,
+        'departments': departments,
+        'department_filter': department_filter,
         'bulk_submit_errors': bulk_submit_errors,
     }
 
@@ -218,7 +238,7 @@ def wizard_step1(request, staff_id=None):
                 return redirect('registry:staff_detail', staff_id=staff.id)
 
             # ถ้าเป็น yellow หรือ green ไม่ต้องอัปโหลดรูป ข้ามไป step 3 เลย
-            if not staff.badge_type.requires_photo():
+            if not staff.badge_type.requires_photo:
                 # สร้าง BadgeRequest ถ้ายังไม่มี หรือ update status ถ้ามีแล้ว
                 badge_request, created = BadgeRequest.objects.get_or_create(
                     staff_profile=staff,
@@ -377,7 +397,7 @@ def wizard_step3(request, staff_id):
 
     # Get photo (ถ้าต้องการ)
     photo = None
-    if staff_profile.badge_type.requires_photo():
+    if staff_profile.badge_type.requires_photo:
         try:
             photo = Photo.objects.get(staff_profile=staff_profile)
         except Photo.DoesNotExist:
@@ -472,7 +492,13 @@ def wizard_submit(request, request_id):
         return redirect('registry:staff_list')
 
     # Check if ready to submit
-    if badge_request.status not in ['ready_to_submit', 'rejected']:
+    allowed_statuses = ['ready_to_submit', 'rejected', 'photo_uploaded']
+
+    # For badge types that don't require photo (yellow/green), allow draft status
+    if not badge_request.staff_profile.badge_type.requires_photo:
+        allowed_statuses.append('draft')
+
+    if badge_request.status not in allowed_statuses:
         messages.warning(request, 'คำขอนี้ไม่สามารถส่งได้ในสถานะปัจจุบัน')
         return redirect('registry:staff_list')
 
@@ -640,7 +666,7 @@ def bulk_submit(request):
                 continue
 
             # Check if photo exists (เฉพาะบัตรที่ต้องการรูป)
-            if staff_profile.badge_type.requires_photo():
+            if staff_profile.badge_type.requires_photo:
                 try:
                     photo = Photo.objects.get(staff_profile=staff_profile)
                     if not photo.cropped_photo:
@@ -692,6 +718,73 @@ def bulk_submit(request):
         }
     elif success_count > 0:
         messages.success(request, f'ส่งคำขอสำเร็จ {success_count} รายการ')
+
+    return redirect('registry:staff_list')
+
+
+@login_required
+def bulk_delete(request):
+    """ลบบุคลากรหลายรายการพร้อมกัน"""
+    if request.method != 'POST':
+        return redirect('registry:staff_list')
+
+    staff_ids = request.POST.getlist('staff_ids')
+    if not staff_ids:
+        messages.error(request, 'กรุณาเลือกรายการที่ต้องการลบ')
+        return redirect('registry:staff_list')
+
+    success_count = 0
+    error_count = 0
+    error_messages = []
+
+    for staff_id in staff_ids:
+        try:
+            staff_profile = StaffProfile.objects.get(pk=staff_id)
+
+            # Check permissions
+            if request.user.role == 'submitter' and staff_profile.department != request.user.department:
+                error_count += 1
+                error_messages.append(f'{staff_profile.full_name}: ไม่มีสิทธิ์ลบข้อมูลนี้')
+                continue
+
+            # Check if badge request exists and its status
+            if hasattr(staff_profile, 'badge_request'):
+                badge_request = staff_profile.badge_request
+                # ห้ามลบถ้าสถานะเป็น approved, badge_created, printed, completed
+                if badge_request.status in ['approved', 'badge_created', 'printed', 'completed']:
+                    error_count += 1
+                    error_messages.append(f'{staff_profile.full_name}: ไม่สามารถลบได้ (สถานะ: {badge_request.get_status_display()})')
+                    continue
+
+            # Delete related objects
+            # Delete photo if exists
+            if hasattr(staff_profile, 'photo'):
+                staff_profile.photo.delete()
+
+            # Delete badge request if exists
+            if hasattr(staff_profile, 'badge_request'):
+                staff_profile.badge_request.delete()
+
+            # Delete staff profile
+            staff_name = staff_profile.full_name
+            staff_profile.delete()
+
+            success_count += 1
+
+        except StaffProfile.DoesNotExist:
+            error_count += 1
+            error_messages.append(f'ไม่พบข้อมูลบุคลากร ID: {staff_id}')
+        except Exception as e:
+            error_count += 1
+            error_messages.append(f'เกิดข้อผิดพลาด: {str(e)}')
+
+    # Show results
+    if success_count > 0:
+        messages.success(request, f'ลบข้อมูลสำเร็จ {success_count} รายการ')
+
+    if error_count > 0:
+        for error_msg in error_messages:
+            messages.warning(request, error_msg)
 
     return redirect('registry:staff_list')
 
@@ -951,6 +1044,42 @@ def work_dates_settings(request):
 # ==================== Excel Import Views ====================
 
 @login_required
+def get_excel_sheets(request):
+    """AJAX endpoint สำหรับอ่านชื่อ sheet จากไฟล์ Excel"""
+    from django.http import JsonResponse
+    import tempfile
+    import os
+
+    if request.method == 'POST' and request.FILES.get('excel_file'):
+        excel_file = request.FILES['excel_file']
+
+        # บันทึกไฟล์ชั่วคราว
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+        for chunk in excel_file.chunks():
+            temp_file.write(chunk)
+        temp_file.close()
+
+        try:
+            # อ่าน sheet names
+            from .utils import get_excel_sheet_names
+            sheet_names = get_excel_sheet_names(temp_file.name)
+
+            # ลบไฟล์ชั่วคราว
+            os.unlink(temp_file.name)
+
+            return JsonResponse({'success': True, 'sheets': sheet_names})
+
+        except Exception as e:
+            # ลบไฟล์ชั่วคราวในกรณีเกิด error
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'No file uploaded'})
+
+
+@login_required
 def staff_import_upload(request):
     """หน้าอัปโหลดไฟล์ Excel สำหรับ import ข้อมูลบุคลากร"""
     from .forms import ExcelImportForm
@@ -962,8 +1091,10 @@ def staff_import_upload(request):
 
         if form.is_valid():
             excel_file = form.cleaned_data['excel_file']
+            department = form.cleaned_data['department']
             badge_type = form.cleaned_data['badge_type']
             zone = form.cleaned_data['zone']
+            sheet_name = form.cleaned_data.get('sheet_name')  # รับ sheet_name จาก form
 
             # บันทึกไฟล์ชั่วคราว
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
@@ -972,15 +1103,17 @@ def staff_import_upload(request):
             temp_file.close()
 
             try:
-                # Parse Excel file
+                # Parse Excel file พร้อม sheet_name
                 from .utils import parse_excel_staff
-                staff_data_list = parse_excel_staff(temp_file.name)
+                staff_data_list = parse_excel_staff(temp_file.name, sheet_name=sheet_name)
 
                 # เก็บข้อมูลใน session
                 request.session['import_data'] = staff_data_list
+                request.session['import_department_id'] = department.id
                 request.session['import_badge_type_id'] = badge_type.id
                 request.session['import_zone_id'] = zone.id if zone else None
                 request.session['import_filename'] = excel_file.name
+                request.session['import_sheet_name'] = sheet_name
 
                 # ลบไฟล์ชั่วคราว
                 os.unlink(temp_file.name)
@@ -1005,18 +1138,21 @@ def staff_import_upload(request):
 def staff_import_preview(request):
     """หน้า preview ข้อมูลก่อนนำเข้า"""
     from apps.badges.models import BadgeType
+    from apps.accounts.models import Department
 
     # ดึงข้อมูลจาก session
     staff_data_list = request.session.get('import_data', [])
+    department_id = request.session.get('import_department_id')
     badge_type_id = request.session.get('import_badge_type_id')
     zone_id = request.session.get('import_zone_id')
     filename = request.session.get('import_filename', '')
 
-    if not staff_data_list or not badge_type_id:
+    if not staff_data_list or not department_id or not badge_type_id:
         messages.warning(request, 'ไม่พบข้อมูลสำหรับนำเข้า กรุณาอัปโหลดไฟล์ใหม่')
         return redirect('registry:staff_import_upload')
 
-    # ดึงข้อมูล badge_type และ zone
+    # ดึงข้อมูล department, badge_type และ zone
+    department = Department.objects.get(id=department_id)
     badge_type = BadgeType.objects.get(id=badge_type_id)
     zone = Zone.objects.get(id=zone_id) if zone_id else None
 
@@ -1043,6 +1179,7 @@ def staff_import_preview(request):
 
     context = {
         'staff_data_list': staff_data_list,
+        'department': department,
         'badge_type': badge_type,
         'zone': zone,
         'filename': filename,
@@ -1067,14 +1204,16 @@ def staff_import_confirm(request):
 
     # ดึงข้อมูลจาก session
     staff_data_list = request.session.get('import_data', [])
+    department_id = request.session.get('import_department_id')
     badge_type_id = request.session.get('import_badge_type_id')
     zone_id = request.session.get('import_zone_id')
 
-    if not staff_data_list or not badge_type_id:
+    if not staff_data_list or not department_id or not badge_type_id:
         messages.warning(request, 'ไม่พบข้อมูลสำหรับนำเข้า กรุณาอัปโหลดไฟล์ใหม่')
         return redirect('registry:staff_import_upload')
 
-    # ดึงข้อมูล badge_type และ zone
+    # ดึงข้อมูล department, badge_type และ zone
+    department = Department.objects.get(id=department_id)
     badge_type = BadgeType.objects.get(id=badge_type_id)
     zone = Zone.objects.get(id=zone_id) if zone_id else None
 
@@ -1083,75 +1222,67 @@ def staff_import_confirm(request):
     skip_count = 0
     error_list = []
 
-    try:
-        with transaction.atomic():
-            for item in staff_data_list:
-                national_id = item.get('national_id', '').strip()
+    # ประมวลผลแต่ละรายการแยก transaction
+    for item in staff_data_list:
+        national_id = item.get('national_id', '').strip()
 
-                # ข้ามข้อมูลซ้ำ
-                if national_id and StaffProfile.objects.filter(national_id=national_id).exists():
-                    skip_count += 1
-                    continue
+        # ข้ามข้อมูลซ้ำ
+        if national_id and StaffProfile.objects.filter(national_id=national_id).exists():
+            skip_count += 1
+            continue
 
-                try:
-                    # หาหน่วยงานจากชื่อ (ถ้าไม่พบให้ใช้หน่วยงานของผู้ใช้)
-                    department_name = item.get('department_name', '').strip()
-                    department = None
+        try:
+            with transaction.atomic():
+                # ใช้หน่วยงานที่เลือกจาก form (จาก session)
+                # หากไฟล์ Excel มีชื่อหน่วยงาน (คอลัมน์ department_name) สามารถใช้แทนได้
+                target_department = department  # ใช้หน่วยงานที่เลือกจาก dropdown
 
-                    if department_name:
-                        department = Department.objects.filter(name__icontains=department_name).first()
+                # ถ้าต้องการให้ไฟล์ Excel สามารถ override หน่วยงานได้ ให้เอา comment ออก
+                # department_name = item.get('department_name', '').strip()
+                # if department_name:
+                #     found_dept = Department.objects.filter(name__icontains=department_name).first()
+                #     if found_dept:
+                #         target_department = found_dept
 
-                    if not department:
-                        department = request.user.department
+                # สร้าง StaffProfile
+                staff_profile = StaffProfile.objects.create(
+                    department=target_department,
+                    first_line=item.get('first_line', ''),
+                    last_line=item.get('last_line', ''),
+                    national_id=national_id,
+                    person_type=item.get('person_type', ''),
+                    position=item.get('position', ''),
+                    badge_type=badge_type,
+                    zone=zone,
+                    age=item.get('age'),
+                    vehicle_registration=item.get('vehicle_registration', ''),
+                    notes=item.get('notes', ''),
+                    created_by=request.user
+                )
 
-                    # สร้าง StaffProfile
-                    staff_profile = StaffProfile.objects.create(
-                        department=department,
-                        title=item.get('title', ''),
-                        first_name=item.get('first_name', ''),
-                        last_name=item.get('last_name', ''),
-                        national_id=national_id,
-                        person_type=item.get('person_type', ''),
-                        position=item.get('position', ''),
-                        badge_type=badge_type,
-                        zone=zone,
-                        age=item.get('age'),
-                        vaccine_dose_1=item.get('vaccine_dose_1', False),
-                        vaccine_dose_2=item.get('vaccine_dose_2', False),
-                        vaccine_dose_3=item.get('vaccine_dose_3', False),
-                        vaccine_dose_4=item.get('vaccine_dose_4', False),
-                        test_rt_pcr=item.get('test_rt_pcr', False),
-                        test_atk=item.get('test_atk', False),
-                        test_temperature=item.get('test_temperature', False),
-                        notes=item.get('notes', ''),
-                        created_by=request.user
-                    )
+                # สร้าง BadgeRequest ในสถานะ draft
+                BadgeRequest.objects.create(
+                    staff_profile=staff_profile,
+                    status='draft',
+                    created_by=request.user
+                )
 
-                    # สร้าง BadgeRequest ในสถานะ draft
-                    BadgeRequest.objects.create(
-                        staff_profile=staff_profile,
-                        status='draft',
-                        created_by=request.user
-                    )
+                success_count += 1
 
-                    success_count += 1
+        except Exception as e:
+            error_list.append({
+                'row': item.get('row_number'),
+                'name': f"{item.get('first_line')} {item.get('last_line')}",
+                'error': str(e)
+            })
 
-                except Exception as e:
-                    error_list.append({
-                        'row': item.get('row_number'),
-                        'name': f"{item.get('title')}{item.get('first_name')} {item.get('last_name')}",
-                        'error': str(e)
-                    })
-
-            # ล้างข้อมูลใน session
-            request.session.pop('import_data', None)
-            request.session.pop('import_badge_type_id', None)
-            request.session.pop('import_zone_id', None)
-            request.session.pop('import_filename', None)
-
-    except Exception as e:
-        messages.error(request, f'เกิดข้อผิดพลาดในการบันทึกข้อมูล: {str(e)}')
-        return redirect('registry:staff_import_preview')
+    # ล้างข้อมูลใน session
+    request.session.pop('import_data', None)
+    request.session.pop('import_department_id', None)
+    request.session.pop('import_badge_type_id', None)
+    request.session.pop('import_zone_id', None)
+    request.session.pop('import_filename', None)
+    request.session.pop('import_sheet_name', None)
 
     # แสดงผลลัพธ์
     if success_count > 0:

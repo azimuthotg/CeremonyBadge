@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>รายงานเซ็นรับบัตร - {{ department.name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 1.5cm;
+        }
+
+        body {
+            font-family: 'Sarabun', 'TH Sarabun New', 'Arial Unicode MS', 'DejaVu Sans', sans-serif;
+            font-size: 14pt;
+            line-height: 1.5;
+            color: #000;
+        }
+
+        .header {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1cm;
+        }
+
+        .logo {
+            width: 2cm;
+            height: auto;
+            margin-right: 0.5cm;
+        }
+
+        .header-text {
+            flex: 1;
+        }
+
+        h1 {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 0;
+            text-align: center;
+        }
+
+        .info-section {
+            margin-bottom: 0.5cm;
+            font-size: 14pt;
+        }
+
+        .info-section p {
+            margin: 3px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5cm;
+            font-size: 13pt;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 6px 4px;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .col-no {
+            width: 40px;
+            text-align: center;
+        }
+
+        .col-badge-number {
+            width: 70px;
+            text-align: center;
+        }
+
+        .col-name {
+            width: auto;
+        }
+
+        .col-position {
+            width: 110px;
+        }
+
+        .col-badge-type {
+            width: 60px;
+            text-align: center;
+        }
+
+        .col-zone {
+            width: 50px;
+            text-align: center;
+        }
+
+        .col-signature {
+            width: 90px;
+            height: 40px;
+        }
+
+
+        .footer {
+            margin-top: 1cm;
+            text-align: right;
+            font-size: 14pt;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with Logo -->
+    <div class="header">
+        <img src="{% load static %}{% static 'img/logo.png' %}" alt="มหาวิทยาลัยนครพนม" class="logo" onerror="this.style.display='none'">
+        <div class="header-text">
+            <h1>รายงานการเซ็นรับบัตรพิธีพระราชทานปริญญาบัตร</h1>
+            <h2>มหาวิทยาลัยนครพนม</h2>
+        </div>
+    </div>
+
+    <!-- Info Section -->
+    <div class="info-section">
+        <p><strong>หน่วยงาน:</strong> {{ department.name }}</p>
+        <p><strong>จำนวนทั้งหมด:</strong> {{ total_count }} คน</p>
+        <p>
+            <strong>แยกตามประเภทบัตร:</strong>
+            {% for badge_type, count in badge_type_counts.items %}
+                {{ badge_type }}: {{ count }} คน{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </p>
+        <p><strong>วันที่พิมพ์รายงาน:</strong> {{ generated_date|date:"d/m/Y H:i" }} น.</p>
+    </div>
+
+    <!-- Table -->
+    <table>
+        <thead>
+            <tr>
+                <th class="col-no">ลำดับ</th>
+                <th class="col-badge-number">เลขบัตร</th>
+                <th class="col-name">ชื่อ-นามสกุล</th>
+                <th class="col-position">ตำแหน่ง</th>
+                <th class="col-badge-type">บัตร</th>
+                <th class="col-zone">โซน</th>
+                <th class="col-signature">ลายเซ็น</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for staff in staff_list %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">
+                    {% if staff.badge %}
+                        {{ staff.badge.badge_number }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ staff.first_line }} {{ staff.last_line }}</td>
+                <td>{{ staff.position }}</td>
+                <td class="text-center">{{ staff.badge_type.name }}</td>
+                <td class="text-center">
+                    {% if staff.zone %}
+                        {{ staff.zone.code }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="col-signature"></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center">ไม่มีข้อมูลบุคลากรที่สร้างบัตรแล้ว</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>ผู้รับผิดชอบ: ....................................</p>
+        <p>วันที่: ........../........../...........</p>
+    </div>
+</body>
+</html>

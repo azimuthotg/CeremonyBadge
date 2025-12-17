@@ -26,8 +26,8 @@ def add_signature_to_badge(badge_img, signatory, include_signature_image=True):
         badge_height = badge_img.height
 
         # ตำแหน่งพื้นที่ลายเซ็น (มุมซ้ายล่าง)
-        sig_x = 30
-        sig_y = badge_height - 200
+        sig_x = 60  # เลื่อนขวา 30 (จาก 30 เป็น 60)
+        sig_y = badge_height - 270  # ลงมาอีก 10 (จาก -280 เป็น -270)
 
         signature_height = 0  # ความสูงของลายเซ็น (จะใช้คำนวณตำแหน่งข้อความ)
 
@@ -37,9 +37,9 @@ def add_signature_to_badge(badge_img, signatory, include_signature_image=True):
             sig_path = signatory.signature_image.path
             signature = Image.open(sig_path).convert('RGBA')
 
-            # Resize ลายเซ็นให้เหมาะสม
-            max_width = 200
-            max_height = 80
+            # Resize ลายเซ็นให้เหมาะสม (ขยาย 50% อีกครั้ง จาก 300x120 เป็น 450x180)
+            max_width = 450  # เพิ่มจาก 300 (+50%)
+            max_height = 180  # เพิ่มจาก 120 (+50%)
             signature.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
 
             # แปลง badge เป็น RGBA
@@ -55,30 +55,35 @@ def add_signature_to_badge(badge_img, signatory, include_signature_image=True):
             signature_height = signature.height
         else:
             # เซ็นมือจริง → ไม่วางรูป แต่เว้นพื้นที่ไว้
-            signature_height = 80  # เว้นพื้นที่ประมาณ 80px
+            signature_height = 180  # เว้นพื้นที่เท่ากับลายเซ็นอิเล็กทรอนิกส์ใหม่
 
         # เพิ่มข้อความผู้เซ็น (ทั้งเซ็นมือจริงและอิเล็กทรอนิกส์)
         draw = ImageDraw.Draw(badge_img)
 
-        # โหลด font (ตัวหนา)
+        # โหลด font (ตัวหนา) - ขนาด 50 สำหรับข้อมูลผู้เซ็น
         try:
             base_dir = settings.BASE_DIR
             font_bold_path = os.path.join(base_dir, 'static', 'fonts', 'THSarabunNew Bold.ttf')
-            font_text = ImageFont.truetype(font_bold_path, 60)
+            font_text = ImageFont.truetype(font_bold_path, 50)
         except:
             font_text = ImageFont.load_default()
 
         text_color = (0, 0, 0)
 
-        # บรรทัดที่ 1: ยศ (ถ้ามี)
-        text_y = sig_y + signature_height + 5
-        if signatory.rank:
-            draw.text((sig_x, text_y), signatory.rank, fill=text_color, font=font_text)
+        # ตำแหน่งข้อความ - ชิดซ้ายคงที่ (ไม่ขึ้นกับลายเซ็น)
+        text_x = 30  # ชิดซ้าย X=30 คงที่
 
-        # บรรทัดที่ 2: ตำแหน่ง (ถ้ามี)
+        # บรรทัดที่ 1: (ยศ + ชื่อ-นามสกุล) - เลื่อนขึ้น 20 (จาก -90 เป็น -110)
+        name_text_y = badge_height - 110
+        rank_prefix = f"{signatory.rank}" if signatory.rank else ""
+        full_name = f"({rank_prefix}{signatory.first_name} {signatory.last_name})"
+        draw.text((text_x, name_text_y), full_name, fill=text_color, font=font_text)
+
+        # บรรทัดที่ 2: ตำแหน่ง (ถ้ามี) - เลื่อนขึ้น 20 (จาก -50 เป็น -70)
         if signatory.position:
-            text_y += 40
-            draw.text((sig_x, text_y), signatory.position, fill=text_color, font=font_text)
+            position_text_y = badge_height - 70
+            position_with_indent = f" {signatory.position}"  # เว้นวรรคหน้า
+            draw.text((text_x, position_text_y), position_with_indent, fill=text_color, font=font_text)
 
         return badge_img
 
@@ -109,7 +114,7 @@ def regenerate_badge_with_signature(badge, signatory, signature_type='electronic
 
         # 1. ดึงรูปภาพ (ถ้ามี)
         photo = None
-        if staff_profile.badge_type.requires_photo():
+        if staff_profile.badge_type.requires_photo:
             try:
                 photo = Photo.objects.get(staff_profile=staff_profile)
             except Photo.DoesNotExist:

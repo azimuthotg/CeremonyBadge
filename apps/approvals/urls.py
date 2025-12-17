@@ -15,6 +15,7 @@ urlpatterns = [
     # Bulk actions
     path('bulk/approve/', views.bulk_approve, name='bulk_approve'),
     path('bulk/reject/', views.bulk_reject, name='bulk_reject'),
+    path('bulk/edit-approved/', views.bulk_edit_approved, name='bulk_edit_approved'),  # Bulk edit for approved items
 
     # Lists
     path('approved/', views.approved_list, name='approved_list'),

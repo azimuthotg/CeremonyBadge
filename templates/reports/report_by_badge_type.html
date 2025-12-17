@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load report_filters %}
+
+{% block title %}รายงานตามประเภทบัตร{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="bi bi-award"></i> รายงานตามประเภทบัตร</h2>
+            <p class="text-muted">วิเคราะห์ข้อมูลแยกตามประเภทบัตร</p>
+        </div>
+    </div>
+
+    <!-- แท็บประเภทบัตร -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <ul class="nav nav-pills" id="badgeTypeTabs" role="tablist">
+                {% for bt in badge_types %}
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if selected_badge_type.id == bt.id %}active{% endif %}"
+                       href="?badge_type={{ bt.id }}"
+                       style="background-color: {{ bt.color_code }}; border-color: {{ bt.color_code }}; color: black; {% if selected_badge_type.id != bt.id %}opacity: 0.6;{% endif %}">
+                        {{ bt.name }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    {% if selected_badge_type and badge_data %}
+    <!-- สถิติประเภทบัตร -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-start border-4" style="border-color: {{ selected_badge_type.color_code }} !important;">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-award-fill" style="font-size: 3rem; color: {{ selected_badge_type.color_code }};"></i>
+                    </div>
+                    <h2 style="color: {{ selected_badge_type.color_code }};">{{ badge_data.total_count }}</h2>
+                    <p class="text-muted mb-0">บัตรทั้งหมด</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-start border-4 border-success">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-printer-fill text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h2 class="text-success">{{ badge_data.printed_count }}</h2>
+                    <p class="text-muted mb-0">พิมพ์แล้ว</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-start border-4 border-warning">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-hourglass text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h2 class="text-warning">{{ badge_data.not_printed_count }}</h2>
+                    <p class="text-muted mb-0">ยังไม่พิมพ์</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- สถิติตามโซนและหน่วยงาน -->
+    <div class="row g-4 mb-4">
+        <!-- สถิติตามโซน -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header badge-header-{{ selected_badge_type.color }}">
+                    <strong><i class="bi bi-geo-alt-fill"></i> แยกตามโซน</strong>
+                </div>
+                <div class="card-body">
+                    {% if badge_data.zone_stats %}
+                        {% for zone in badge_data.zone_stats %}
+                        {% if zone.staff_profile__zone__id %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div>
+                                <strong>{{ zone.staff_profile__zone__code }}</strong> - {{ zone.staff_profile__zone__name }}
+                            </div>
+                            <div>
+                                <span class="badge badge-header-{{ selected_badge_type.color }}" style="font-size: 1.1rem; padding: 6px 12px;">
+                                    {{ zone.total }} บัตร
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- บัตรที่ไม่มีโซน -->
+                        {% for zone in badge_data.zone_stats %}
+                        {% if not zone.staff_profile__zone__id %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="text-muted">ไม่ได้ระบุโซน</span>
+                            </div>
+                            <div>
+                                <span class="badge bg-secondary" style="font-size: 1.1rem; padding: 6px 12px;">
+                                    {{ zone.total }} บัตร
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p class="mt-2">ไม่มีข้อมูลโซน</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 5 หน่วยงาน -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header badge-header-{{ selected_badge_type.color }}">
+                    <strong><i class="bi bi-trophy-fill"></i> Top 5 หน่วยงาน</strong>
+                </div>
+                <div class="card-body">
+                    {% if badge_data.top_departments %}
+                        {% for dept in badge_data.top_departments %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div>
+                                <i class="bi bi-building me-2" style="color: {{ selected_badge_type.color_code }};"></i>
+                                <strong>{{ dept.staff_profile__department__name }}</strong>
+                            </div>
+                            <div>
+                                <span class="badge badge-header-{{ selected_badge_type.color }}" style="font-size: 1.1rem; padding: 6px 12px;">
+                                    {{ dept.total }} บัตร
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p class="mt-2">ไม่มีข้อมูลหน่วยงาน</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ตัวกรอง -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <input type="hidden" name="badge_type" value="{{ selected_badge_type.id }}">
+
+                        <div class="col-md-3">
+                            <label class="form-label">หน่วยงาน</label>
+                            <select name="department" class="form-select">
+                                <option value="">-- ทั้งหมด --</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if department_filter == dept.id|stringformat:'s' %}selected{% endif %}>
+                                    {{ dept.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">โซน</label>
+                            <select name="zone" class="form-select">
+                                <option value="">-- ทั้งหมด --</option>
+                                {% for zone in zones %}
+                                <option value="{{ zone.id }}" {% if zone_filter == zone.id|stringformat:'s' %}selected{% endif %}>
+                                    {{ zone.code }} - {{ zone.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">สถานะการพิมพ์</label>
+                            <select name="print_status" class="form-select">
+                                <option value="">-- ทั้งหมด --</option>
+                                <option value="printed" {% if print_status == 'printed' %}selected{% endif %}>พิมพ์แล้ว</option>
+                                <option value="not_printed" {% if print_status == 'not_printed' %}selected{% endif %}>ยังไม่พิมพ์</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-funnel"></i> กรอง
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- รายการบัตร -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header badge-header-{{ selected_badge_type.color }}">
+                    <strong><i class="bi bi-list-ul"></i> รายการบัตร (แสดง 50 รายการแรก)</strong>
+                </div>
+                <div class="card-body">
+                    {% if badge_data.badges_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="12%">หมายเลขบัตร</th>
+                                    <th width="18%">ชื่อ-นามสกุล</th>
+                                    <th width="20%">หน่วยงาน</th>
+                                    <th width="12%">โซน</th>
+                                    <th width="10%">สถานะพิมพ์</th>
+                                    <th width="12%">สร้างเมื่อ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for badge in badge_data.badges_list %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'badges:badge_detail' badge.id %}">
+                                            <strong>{{ badge.badge_number }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ badge.staff_profile.full_name }}</td>
+                                    <td>{{ badge.staff_profile.department.name }}</td>
+                                    <td>
+                                        {% if badge.staff_profile.zone %}
+                                            {{ badge.staff_profile.zone.code }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if badge.is_printed %}
+                                            <span class="badge bg-success">พิมพ์แล้ว</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">ยังไม่พิมพ์</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ badge.created_at|date:"d/m/Y H:i" }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                        <p class="mt-3">ไม่พบข้อมูลบัตร</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

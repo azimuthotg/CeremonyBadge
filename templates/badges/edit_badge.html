@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}แก้ไขบัตร{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'badges:badge_list' %}">บัตรพร้อมพิมพ์</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'badges:badge_detail' badge.id %}">{{ badge.badge_number }}</a></li>
+                    <li class="breadcrumb-item active">แก้ไขบัตร</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-pencil-square"></i> แก้ไขบัตร: {{ badge.badge_number }}</h2>
+            <p class="text-muted">แก้ไขข้อมูลและสร้างบัตรใหม่</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left: Form -->
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header badge-header-{{ badge.badge_type.color }}">
+                    <strong><i class="bi bi-pencil"></i> ฟอร์มแก้ไขข้อมูล</strong>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="editBadgeForm">
+                        {% csrf_token %}
+
+                        <!-- Display Name -->
+                        <div class="mb-3">
+                            <label for="display_name" class="form-label">
+                                <i class="bi bi-fonts"></i> ชื่อที่แสดงบนบัตร
+                                <small class="text-muted">(ถ้าชื่อยาว)</small>
+                            </label>
+                            <input type="text" class="form-control" id="display_name" name="display_name"
+                                   value="{{ staff_profile.display_name|default:'' }}"
+                                   placeholder="เช่น ศ. ดร.นายแพทย์ กระแส|ชนะวงศ์">
+                            <small class="text-muted">
+                                ชื่อเต็ม: <strong>{{ staff_profile.full_name }}</strong><br>
+                                <i class="bi bi-info-circle"></i> ใช้ <strong>|</strong> เพื่อแยกบรรทัด (เช่น "ยศ ชื่อ|นามสกุล")
+                            </small>
+                        </div>
+
+                        <!-- Zone -->
+                        <div class="mb-3">
+                            <label for="zone" class="form-label">
+                                <i class="bi bi-geo-alt"></i> พื้นที่/โซน
+                            </label>
+                            <select class="form-select" id="zone" name="zone">
+                                <option value="">-- ไม่ระบุ --</option>
+                                {% for zone in zones %}
+                                <option value="{{ zone.id }}" {% if staff_profile.zone and staff_profile.zone.id == zone.id %}selected{% endif %}>
+                                    {{ zone.code }} - {{ zone.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                ปัจจุบัน: <strong>{{ staff_profile.zone.full_description|default:"-" }}</strong>
+                            </small>
+                        </div>
+
+                        <!-- Department -->
+                        <div class="mb-3">
+                            <label for="department" class="form-label">
+                                <i class="bi bi-building"></i> หน่วยงาน
+                            </label>
+                            <select class="form-select" id="department" name="department">
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if staff_profile.department.id == dept.id %}selected{% endif %}>
+                                    {{ dept.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                ปัจจุบัน: <strong>{{ staff_profile.department.name }}</strong><br>
+                                <i class="bi bi-info-circle"></i> หน่วยงานไม่แสดงบนบัตร - แก้ไขได้โดยไม่ต้องพิมพ์บัตรใหม่
+                            </small>
+                        </div>
+
+                        <!-- Badge Type (Color) -->
+                        <div class="mb-3">
+                            <label for="badge_type" class="form-label">
+                                <i class="bi bi-palette"></i> สีบัตร
+                            </label>
+                            <select class="form-select" id="badge_type" name="badge_type">
+                                {% for bt in badge_types %}
+                                <option value="{{ bt.id }}"
+                                        {% if badge.badge_type.id == bt.id %}selected{% endif %}
+                                        style="background-color: {{ bt.color_code }}; color: black;">
+                                    {{ bt.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="alert alert-warning mt-2">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <strong>คำเตือน:</strong> ถ้าเปลี่ยนสีบัตร จะได้หมายเลขบัตรใหม่!
+                            </div>
+                        </div>
+
+                        <!-- Revision Reason (Required) -->
+                        <div class="mb-3">
+                            <label for="revision_reason" class="form-label">
+                                <i class="bi bi-chat-left-text"></i> เหตุผลในการแก้ไข <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="revision_reason" name="revision_reason"
+                                      rows="3" required
+                                      placeholder="เช่น ชื่อยาวเกินไป, เปลี่ยนโซน, เปลี่ยนสีบัตร ฯลฯ"></textarea>
+                        </div>
+
+                        <!-- Revision Info -->
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <strong>ข้อมูลการแก้ไข:</strong><br>
+                            - จำนวนครั้งที่แก้ไข: <strong>{{ badge.revision_count }} ครั้ง</strong><br>
+                            {% if badge.revision_reason %}
+                            - เหตุผลล่าสุด: <em>{{ badge.revision_reason }}</em>
+                            {% endif %}
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> บันทึกการแก้ไข
+                            </button>
+                            <a href="{% url 'badges:badge_detail' badge.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> ยกเลิก
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Current Badge Preview -->
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header badge-header-{{ badge.badge_type.color }}">
+                    <strong><i class="bi bi-eye"></i> ภาพบัตรปัจจุบัน</strong>
+                </div>
+                <div class="card-body text-center">
+                    {% if badge.badge_file %}
+                        <img src="{{ badge.badge_file.url }}" alt="Badge" class="img-fluid rounded" style="max-height: 500px; border: 2px solid #ddd;">
+                    {% else %}
+                        <div class="py-5 bg-light rounded">
+                            <i class="bi bi-image" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-2">ไม่มีรูปบัตร</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Badge Info -->
+                    <div class="mt-3 text-start">
+                        <h5>
+                            <span class="badge" style="background-color: {{ badge.badge_type.color_code }};">
+                                {{ badge.badge_number }}
+                            </span>
+                        </h5>
+                        <p class="mb-1"><strong>{{ staff_profile.full_name }}</strong></p>
+                        <p class="text-muted mb-1">{{ staff_profile.position }}</p>
+                        <p class="text-muted mb-1">{{ staff_profile.department.name }}</p>
+                        {% if staff_profile.zone %}
+                        <p class="text-muted mb-1">
+                            <i class="bi bi-geo-alt"></i> {{ staff_profile.zone.full_description }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="card shadow-sm">
+                <div class="card-header badge-header-{{ badge.badge_type.color }}">
+                    <strong><i class="bi bi-lightbulb"></i> คำแนะนำ</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-success">✅ แก้ไขโดยไม่ต้องพิมพ์บัตรใหม่:</h6>
+                    <ul class="mb-3">
+                        <li><strong>เปลี่ยนหน่วยงาน</strong> - อัพเดตข้อมูลในระบบเท่านั้น</li>
+                        <li>หมายเลขบัตร <strong>ไม่เปลี่ยน</strong></li>
+                        <li>ไม่ต้องพิมพ์บัตรใหม่ (เพราะบัตรไม่แสดงชื่อหน่วยงาน)</li>
+                    </ul>
+
+                    <h6 class="text-warning">⚠️ แก้ไขแบบธรรมดา (ต้องพิมพ์บัตรใหม่):</h6>
+                    <ul class="mb-3">
+                        <li>แก้ไขชื่อที่แสดงบนบัตร (display_name)</li>
+                        <li>เปลี่ยนโซน</li>
+                        <li>หมายเลขบัตร <strong>ไม่เปลี่ยน</strong> แต่ต้องพิมพ์ใหม่</li>
+                    </ul>
+
+                    <h6 class="text-danger">🔴 การเปลี่ยนสีบัตร (ได้หมายเลขใหม่):</h6>
+                    <ul>
+                        <li>เปลี่ยนประเภทบัตร (สี)</li>
+                        <li>ระบบจะออกหมายเลขบัตรใหม่</li>
+                        <li>หมายเลขเก่าจะไม่ใช้ได้อีก</li>
+                        <li>ต้องพิมพ์บัตรใหม่</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Warn user if changing badge type
+document.getElementById('badge_type').addEventListener('change', function() {
+    const currentBadgeTypeId = "{{ badge.badge_type.id }}";
+    const selectedBadgeTypeId = this.value;
+
+    if (selectedBadgeTypeId !== currentBadgeTypeId) {
+        if (!confirm('คุณกำลังเปลี่ยนสีบัตร! จะได้หมายเลขบัตรใหม่และต้องพิมพ์ใหม่\n\nคุณต้องการดำเนินการต่อหรือไม่?')) {
+            // Reset to current badge type
+            this.value = currentBadgeTypeId;
+        }
+    }
+});
+
+// Validate form before submit
+document.getElementById('editBadgeForm').addEventListener('submit', function(e) {
+    const reason = document.getElementById('revision_reason').value.trim();
+
+    if (!reason) {
+        e.preventDefault();
+        alert('กรุณาระบุเหตุผลในการแก้ไข');
+        document.getElementById('revision_reason').focus();
+        return false;
+    }
+
+    const currentBadgeTypeId = "{{ badge.badge_type.id }}";
+    const selectedBadgeTypeId = document.getElementById('badge_type').value;
+
+    if (selectedBadgeTypeId !== currentBadgeTypeId) {
+        if (!confirm('ยืนยันการเปลี่ยนสีบัตร?\n\nจะได้หมายเลขบัตรใหม่และต้องพิมพ์ใหม่')) {
+            e.preventDefault();
+            return false;
+        }
+    }
+});
+</script>
+{% endblock %}

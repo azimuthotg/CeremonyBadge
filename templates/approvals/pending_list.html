@@ -5,6 +5,7 @@
 
 {% block content %}
 <div class="container-fluid px-4 py-4">
+    {% csrf_token %}
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-md-12">
@@ -27,7 +28,7 @@
                             role="tab"
                             style="background-color: {{ data.badge_type.color_code }}; border-color: {{ data.badge_type.color_code }}; color: black; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
                         {{ data.badge_type.name }}
-                        <span class="badge bg-light text-dark ms-1">{{ data.approved_count }}/{{ data.total_count }}</span>
+                        <span class="badge bg-light text-dark ms-1">✓ อนุมัติแล้ว {{ data.approved_count }}/{{ data.total_count }} คำขอ</span>
                     </button>
                 </li>
                 {% endfor %}
@@ -35,20 +36,73 @@
         </div>
     </div>
 
-    <!-- Search -->
-    <div class="row mb-4">
-        <div class="col-md-6">
+    <!-- Search and Filters -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
             <form method="get" class="input-group">
-                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ, นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ-นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                {% if department_filter %}
+                <input type="hidden" name="department" value="{{ department_filter }}">
+                {% endif %}
                 <button class="btn btn-outline-primary" type="submit">
                     <i class="bi bi-search"></i> ค้นหา
                 </button>
-                {% if search %}
+                {% if search or department_filter %}
                 <a href="{% url 'approvals:pending_list' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-x"></i> ล้าง
                 </a>
                 {% endif %}
             </form>
+        </div>
+        <div class="col-md-4">
+            <form method="get" id="department-filter-form">
+                {% if search %}
+                <input type="hidden" name="search" value="{{ search }}">
+                {% endif %}
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                    <select class="form-select" name="department" onchange="this.form.submit()">
+                        <option value="">-- ทุกหน่วยงาน --</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if dept.id|stringformat:'s' == department_filter %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-funnel"></i></span>
+                <select class="form-select filter-status-select" id="status-filter">
+                    <option value="all">ทั้งหมด</option>
+                    <option value="submitted">ส่งแล้ว</option>
+                    <option value="under_review">กำลังตรวจสอบ</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar (hidden by default) -->
+    <div id="bulkActionsBar" class="row mb-3" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                    <strong><span id="selectedCount">0</span> รายการที่เลือก</strong>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-success me-2" id="bulkApproveBtn">
+                        <i class="bi bi-check-circle"></i> อนุมัติที่เลือก
+                    </button>
+                    <button type="button" class="btn btn-warning me-2" id="bulkRejectBtn">
+                        <i class="bi bi-x-circle"></i> ส่งกลับที่เลือก
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="clearSelectionBtn">
+                        <i class="bi bi-x"></i> ยกเลิก
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -66,21 +120,25 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th width="12%">ยศ</th>
+                                    <th width="30"><input type="checkbox" class="form-check-input select-all-pending" data-badge-type="{{ data.badge_type.id }}"></th>
                                     <th width="18%">ชื่อ-นามสกุล</th>
                                     <th width="12%">บัตรประชาชน</th>
-                                    <th width="18%">ตำแหน่ง</th>
-                                    <th width="12%">ประเภทบัตร</th>
+                                    <th width="15%">ตำแหน่ง</th>
+                                    <th width="10%">ประเภทบัตร</th>
+                                    <th width="12%">โซน</th>
                                     <th width="10%">สถานะ</th>
                                     <th width="10%" class="text-center">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="pending-table-body" data-badge-type="{{ data.badge_type.id }}">
                                 {% for req in data.requests %}
-                                <tr>
-                                    <td>{{ req.staff_profile.title }}</td>
+                                <tr class="pending-row" data-status="{{ req.status }}">
                                     <td>
-                                        <strong>{{ req.staff_profile.first_name }} {{ req.staff_profile.last_name }}</strong>
+                                        <input type="checkbox" class="form-check-input pending-checkbox" value="{{ req.id }}" data-badge-type="{{ data.badge_type.id }}">
+                                    </td>
+                                    <td>
+                                        <strong>{{ req.staff_profile.first_line }} {{ req.staff_profile.last_line }}</strong>
+                                        <small class="text-muted d-block">{{ req.staff_profile.department.name }}</small>
                                     </td>
                                     <td class="small">{{ req.staff_profile.national_id|default:"-" }}</td>
                                     <td>{{ req.staff_profile.position }}</td>
@@ -90,14 +148,27 @@
                                         </span>
                                     </td>
                                     <td>
+                                        {% if req.staff_profile.zone %}
+                                            <span class="badge bg-secondary">{{ req.staff_profile.zone.code }}</span>
+                                            <small class="text-muted d-block">{{ req.staff_profile.zone.name }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         <span class="badge-status {{ req.status }}">
                                             {{ req.get_status_display }}
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-sm btn-primary" title="ตรวจสอบ">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-outline-secondary" title="ดูรายละเอียด">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-success quick-approve-btn" data-request-id="{{ req.id }}" data-name="{{ req.staff_profile.first_line }} {{ req.staff_profile.last_line }}" title="อนุมัติ">
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -122,4 +193,398 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- Bulk Approve Modal -->
+<div class="modal fade" id="bulkApproveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-check-circle"></i> อนุมัติที่เลือก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-approve-form" action="{% url 'approvals:bulk_approve' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังอนุมัติคำขอ <strong><span id="bulk-approve-count">0</span></strong> รายการ
+                    </div>
+                    <p>คุณต้องการดำเนินการต่อหรือไม่?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> ยืนยันอนุมัติ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Reject Modal -->
+<div class="modal fade" id="bulkRejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-x-circle"></i> ส่งกลับที่เลือก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-reject-form" action="{% url 'approvals:bulk_reject' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังส่งกลับคำขอ <strong><span id="bulk-reject-count">0</span></strong> รายการ
+                    </div>
+                    <div class="mb-3">
+                        <label for="bulk-rejection-reason" class="form-label">
+                            <strong>เหตุผลในการส่งกลับ:</strong> <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="bulk-rejection-reason" name="rejection_reason" rows="3" required placeholder="กรุณาระบุเหตุผลในการส่งกลับ..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-x-circle"></i> ยืนยันส่งกลับ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Approve Modal (Single Item) -->
+<div class="modal fade" id="quickApproveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-check-circle"></i> อนุมัติคำขอ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="quick-approve-form">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังอนุมัติคำขอของ <strong><span id="quick-approve-name"></span></strong>
+                    </div>
+                    <p>คุณต้องการดำเนินการต่อหรือไม่?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> ยืนยันอนุมัติ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    // Wait for DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    function init() {
+        console.log('Initializing pending list tab memory and bulk actions...');
+        initTabMemory();
+        restoreActiveTab();
+        initBulkActions();
+        initStatusFilter();
+        initQuickApprove();
+    }
+
+    // Tab Memory with localStorage
+    function initTabMemory() {
+        // Listen to all tab button clicks (note: this page uses "pill" not "tab")
+        document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function(event) {
+                // Extract badge type ID from tab target
+                const target = event.target.getAttribute('data-bs-target');
+                const badgeTypeId = target.replace('#badge-', '');
+
+                // Save to localStorage
+                localStorage.setItem('pending_list_active_tab', badgeTypeId);
+                console.log('Saved active tab (pending list):', badgeTypeId);
+            });
+        });
+    }
+
+    function restoreActiveTab() {
+        // Get saved tab from localStorage
+        const savedTab = localStorage.getItem('pending_list_active_tab');
+
+        if (savedTab) {
+            // Find and activate the saved tab
+            const tabButton = document.getElementById('badge-' + savedTab + '-tab');
+            if (tabButton) {
+                const tab = new bootstrap.Tab(tabButton);
+                tab.show();
+                console.log('Restored active tab (pending list):', savedTab);
+            }
+        }
+    }
+
+    // Bulk Actions
+    function initBulkActions() {
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+        const bulkRejectBtn = document.getElementById('bulkRejectBtn');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+        // Select all checkboxes
+        document.querySelectorAll('.select-all-pending').forEach(function(selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const badgeType = this.getAttribute('data-badge-type');
+                const checkboxes = document.querySelectorAll('.pending-checkbox[data-badge-type="' + badgeType + '"]');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+                updateBulkActionsBar();
+            });
+        });
+
+        // Individual checkboxes
+        document.querySelectorAll('.pending-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                updateBulkActionsBar();
+
+                // Update select-all checkbox for this badge type
+                const badgeType = this.getAttribute('data-badge-type');
+                const allCheckboxes = document.querySelectorAll('.pending-checkbox[data-badge-type="' + badgeType + '"]');
+                const checkedCheckboxes = document.querySelectorAll('.pending-checkbox[data-badge-type="' + badgeType + '"]:checked');
+                const selectAllCheckbox = document.querySelector('.select-all-pending[data-badge-type="' + badgeType + '"]');
+
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length && allCheckboxes.length > 0;
+                }
+            });
+        });
+
+        // Clear selection button
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', function() {
+                document.querySelectorAll('.pending-checkbox:checked').forEach(function(checkbox) {
+                    checkbox.checked = false;
+                });
+                document.querySelectorAll('.select-all-pending:checked').forEach(function(checkbox) {
+                    checkbox.checked = false;
+                });
+                updateBulkActionsBar();
+            });
+        }
+
+        // Bulk approve button
+        if (bulkApproveBtn) {
+            bulkApproveBtn.addEventListener('click', function() {
+                const selectedIds = getSelectedIds();
+                if (selectedIds.length === 0) {
+                    alert('กรุณาเลือกรายการที่ต้องการอนุมัติ');
+                    return;
+                }
+
+                // Update count in modal
+                const countSpan = document.getElementById('bulk-approve-count');
+                if (countSpan) {
+                    countSpan.textContent = selectedIds.length;
+                }
+
+                // Add hidden inputs to form
+                const form = document.getElementById('bulk-approve-form');
+                if (form) {
+                    // Clear previous hidden inputs
+                    const oldInputs = form.querySelectorAll('input[name="request_ids"]');
+                    oldInputs.forEach(function(input) {
+                        input.remove();
+                    });
+
+                    // Add new hidden inputs
+                    selectedIds.forEach(function(id) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'request_ids';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                }
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('bulkApproveModal'));
+                modal.show();
+            });
+        }
+
+        // Bulk reject button
+        if (bulkRejectBtn) {
+            bulkRejectBtn.addEventListener('click', function() {
+                const selectedIds = getSelectedIds();
+                if (selectedIds.length === 0) {
+                    alert('กรุณาเลือกรายการที่ต้องการส่งกลับ');
+                    return;
+                }
+
+                // Update count in modal
+                const countSpan = document.getElementById('bulk-reject-count');
+                if (countSpan) {
+                    countSpan.textContent = selectedIds.length;
+                }
+
+                // Clear rejection reason textarea
+                const reasonTextarea = document.getElementById('bulk-rejection-reason');
+                if (reasonTextarea) {
+                    reasonTextarea.value = '';
+                }
+
+                // Add hidden inputs to form
+                const form = document.getElementById('bulk-reject-form');
+                if (form) {
+                    // Clear previous hidden inputs
+                    const oldInputs = form.querySelectorAll('input[name="request_ids"]');
+                    oldInputs.forEach(function(input) {
+                        input.remove();
+                    });
+
+                    // Add new hidden inputs
+                    selectedIds.forEach(function(id) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'request_ids';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                }
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('bulkRejectModal'));
+                modal.show();
+            });
+        }
+
+        function updateBulkActionsBar() {
+            const selectedCheckboxes = document.querySelectorAll('.pending-checkbox:checked');
+            const count = selectedCheckboxes.length;
+
+            if (selectedCountSpan) {
+                selectedCountSpan.textContent = count;
+            }
+
+            if (bulkActionsBar) {
+                bulkActionsBar.style.display = count > 0 ? 'block' : 'none';
+            }
+        }
+
+        function getSelectedIds() {
+            const selectedCheckboxes = document.querySelectorAll('.pending-checkbox:checked');
+            const ids = [];
+            selectedCheckboxes.forEach(function(checkbox) {
+                ids.push(checkbox.value);
+            });
+            return ids;
+        }
+
+        // Handle form submissions - disable button to prevent double submit
+        const approveForm = document.getElementById('bulk-approve-form');
+        if (approveForm) {
+            approveForm.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังดำเนินการ...';
+                }
+            });
+        }
+
+        const rejectForm = document.getElementById('bulk-reject-form');
+        if (rejectForm) {
+            rejectForm.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังดำเนินการ...';
+                }
+            });
+        }
+    }
+
+    // Status Filter (client-side)
+    function initStatusFilter() {
+        const statusFilter = document.getElementById('status-filter');
+        if (!statusFilter) return;
+
+        statusFilter.addEventListener('change', function() {
+            const selectedStatus = this.value;
+
+            // กรองในทุก tab
+            document.querySelectorAll('.pending-table-body').forEach(function(tbody) {
+                const rows = tbody.querySelectorAll('.pending-row');
+
+                rows.forEach(function(row) {
+                    const rowStatus = row.getAttribute('data-status');
+
+                    if (selectedStatus === 'all') {
+                        row.style.display = '';
+                    } else if (rowStatus === selectedStatus) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+    }
+
+    // Quick Approve (Single Item)
+    function initQuickApprove() {
+        // Get all quick approve buttons
+        const quickApproveButtons = document.querySelectorAll('.quick-approve-btn');
+
+        quickApproveButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const requestId = this.getAttribute('data-request-id');
+                const name = this.getAttribute('data-name');
+
+                // Update modal content
+                const nameSpan = document.getElementById('quick-approve-name');
+                if (nameSpan) {
+                    nameSpan.textContent = name;
+                }
+
+                // Set form action
+                const form = document.getElementById('quick-approve-form');
+                if (form) {
+                    form.action = '/approvals/approve/' + requestId + '/';
+                }
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('quickApproveModal'));
+                modal.show();
+            });
+        });
+
+        // Handle form submission
+        const quickApproveForm = document.getElementById('quick-approve-form');
+        if (quickApproveForm) {
+            quickApproveForm.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังอนุมัติ...';
+                }
+            });
+        }
+    }
+})();
+</script>
 {% endblock %}

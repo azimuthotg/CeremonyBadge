@@ -24,14 +24,14 @@ class ZoneAdmin(admin.ModelAdmin):
 @admin.register(StaffProfile)
 class StaffProfileAdmin(admin.ModelAdmin):
     list_display = ['full_name', 'department', 'position', 'badge_type', 'email', 'phone', 'created_at']
-    list_filter = ['department', 'badge_type', 'title', 'created_at']
-    search_fields = ['first_name', 'last_name', 'email', 'phone', 'position']
-    ordering = ['last_name', 'first_name']
+    list_filter = ['department', 'badge_type', 'created_at']
+    search_fields = ['first_line', 'last_line', 'email', 'phone', 'position']
+    ordering = ['last_line', 'first_line']
     date_hierarchy = 'created_at'
 
     fieldsets = (
         ('ข้อมูลส่วนตัว', {
-            'fields': ('title', 'first_name', 'last_name')
+            'fields': ('first_line', 'last_line')
         }),
         ('ข้อมูลการติดต่อ', {
             'fields': ('email', 'phone')
@@ -51,7 +51,7 @@ class StaffProfileAdmin(admin.ModelAdmin):
 class PhotoAdmin(admin.ModelAdmin):
     list_display = ['staff_profile', 'file_size', 'width', 'height', 'uploaded_by', 'uploaded_at']
     list_filter = ['uploaded_at']
-    search_fields = ['staff_profile__first_name', 'staff_profile__last_name']
+    search_fields = ['staff_profile__first_line', 'staff_profile__last_line']
     ordering = ['-uploaded_at']
     date_hierarchy = 'uploaded_at'
     readonly_fields = ['original_photo', 'cropped_photo', 'file_size', 'width', 'height', 'uploaded_by', 'uploaded_at']
@@ -61,7 +61,7 @@ class PhotoAdmin(admin.ModelAdmin):
 class BadgeRequestAdmin(admin.ModelAdmin):
     list_display = ['staff_profile', 'status', 'submitted_at', 'reviewed_by', 'approved_by', 'created_at']
     list_filter = ['status', 'submitted_at', 'reviewed_at', 'approved_at', 'created_at']
-    search_fields = ['staff_profile__first_name', 'staff_profile__last_name', 'rejection_reason', 'notes']
+    search_fields = ['staff_profile__first_line', 'staff_profile__last_line', 'rejection_reason', 'notes']
     ordering = ['-created_at']
     date_hierarchy = 'created_at'
 

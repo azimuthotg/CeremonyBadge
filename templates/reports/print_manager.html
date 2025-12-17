@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Print Manager - จัดการการพิมพ์บัตร{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-printer"></i> Print Manager - จัดการการพิมพ์บัตร</h2>
+    </div>
+
+    <!-- ภาพรวมทุกหน่วยงาน -->
+    {% if not selected_department %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-building"></i> ภาพรวมทุกหน่วยงาน</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>หน่วยงาน</th>
+                            <th class="text-center">ทั้งหมด</th>
+                            <th class="text-center">พร้อมพิมพ์</th>
+                            <th class="text-center">พิมพ์แล้ว</th>
+                            <th class="text-center">รอดำเนินการ</th>
+                            <th class="text-center">ยังไม่พร้อม</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dept_stat in departments_stats %}
+                        <tr>
+                            <td><strong>{{ dept_stat.department.name }}</strong></td>
+                            <td class="text-center">{{ dept_stat.total }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-success">{{ dept_stat.ready }}</span>
+                                <small class="text-muted">({{ dept_stat.ready_percent }}%)</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ dept_stat.printed }}</span>
+                                <small class="text-muted">({{ dept_stat.printed_percent }}%)</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-warning text-dark">{{ dept_stat.waiting }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-danger">{{ dept_stat.not_ready }}</span>
+                            </td>
+                            <td class="text-center">
+                                <a href="?department={{ dept_stat.department.id }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> ดูรายละเอียด
+                                </a>
+                                <a href="{% url 'reports:badge_printing_status_pdf' dept_stat.department.id %}"
+                                   class="btn btn-sm btn-danger" target="_blank">
+                                    <i class="bi bi-file-pdf"></i> PDF
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">ไม่พบข้อมูลหน่วยงาน</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- รายละเอียดหน่วยงาน -->
+    {% if selected_department %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-building-fill"></i> {{ selected_department.name }}
+            </h5>
+            <div>
+                <a href="{% url 'reports:badge_printing_status_pdf' selected_department.id %}"
+                   class="btn btn-light btn-sm" target="_blank">
+                    <i class="bi bi-file-pdf"></i> Export PDF
+                </a>
+                <a href="?" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> กลับ
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- สรุปหน่วยงาน -->
+            <div class="row mb-4">
+                {% for dept_stat in departments_stats %}
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">พร้อมพิมพ์</h6>
+                            <h3 class="text-success">{{ dept_stat.ready }}</h3>
+                            <small class="text-muted">{{ dept_stat.ready_percent }}%</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">พิมพ์แล้ว</h6>
+                            <h3 class="text-info">{{ dept_stat.printed }}</h3>
+                            <small class="text-muted">{{ dept_stat.printed_percent }}%</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">รอดำเนินการ</h6>
+                            <h3 class="text-warning">{{ dept_stat.waiting }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">ยังไม่พร้อม</h6>
+                            <h3 class="text-danger">{{ dept_stat.not_ready }}</h3>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- ฟิลเตอร์และค้นหา -->
+            <form method="get" class="row g-3 mb-3">
+                <input type="hidden" name="department" value="{{ department_filter }}">
+
+                <div class="col-md-4">
+                    <label class="form-label">กรองตามสถานะ:</label>
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">ทั้งหมด</option>
+                        <option value="ready" {% if status_filter == 'ready' %}selected{% endif %}>พร้อมพิมพ์</option>
+                        <option value="printed" {% if status_filter == 'printed' %}selected{% endif %}>พิมพ์แล้ว</option>
+                        <option value="waiting" {% if status_filter == 'waiting' %}selected{% endif %}>รอดำเนินการ</option>
+                        <option value="not_ready" {% if status_filter == 'not_ready' %}selected{% endif %}>ยังไม่พร้อม</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">ค้นหา (ชื่อ, เลขบัตร):</label>
+                    <input type="text" name="search" class="form-control"
+                           value="{{ search_query }}" placeholder="พิมพ์เพื่อค้นหา...">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> ค้นหา
+                    </button>
+                </div>
+            </form>
+
+            <!-- ตารางรายชื่อ -->
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 12%;">เลขบัตร</th>
+                            <th style="width: 25%;">ชื่อ-นามสกุล</th>
+                            <th style="width: 15%;">ประเภทบัตร</th>
+                            <th style="width: 8%;" class="text-center">โซน</th>
+                            <th style="width: 15%;" class="text-center">สถานะ</th>
+                            <th style="width: 15%;">หมายเหตุ</th>
+                            <th style="width: 5%;" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for staff in staff_data %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><code>{{ staff.badge_number }}</code></td>
+                            <td>{{ staff.full_name }}</td>
+                            <td>
+                                <span class="badge" style="background-color:
+                                    {% if staff.badge_color == 'pink' %}#FFB6D9{% endif %}
+                                    {% if staff.badge_color == 'red' %}#FF6B6B{% endif %}
+                                    {% if staff.badge_color == 'yellow' %}#FFD93D{% endif %}
+                                    {% if staff.badge_color == 'green' %}#6BCB77{% endif %}
+                                    ; color: #000;">
+                                    {{ staff.badge_type }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ staff.zone }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ staff.badge_class }}">{{ staff.status }}</span>
+                            </td>
+                            <td>
+                                {% if staff.notes %}
+                                <small class="text-danger">{{ staff.notes }}</small>
+                                {% else %}
+                                <small class="text-muted">-</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'registry:staff_detail' staff.id %}"
+                                   class="btn btn-sm btn-outline-primary" title="ดูรายละเอียด">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">
+                                {% if status_filter or search_query %}
+                                ไม่พบข้อมูลตามเงื่อนไขที่กรอง
+                                {% else %}
+                                ไม่มีข้อมูลบุคลากร
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if staff_data %}
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i>
+                แสดง <strong>{{ staff_data|length }}</strong> รายการ
+                {% if status_filter %}
+                (กรอง:
+                {% if status_filter == 'ready' %}พร้อมพิมพ์{% endif %}
+                {% if status_filter == 'printed' %}พิมพ์แล้ว{% endif %}
+                {% if status_filter == 'waiting' %}รอดำเนินการ{% endif %}
+                {% if status_filter == 'not_ready' %}ยังไม่พร้อม{% endif %}
+                )
+                {% endif %}
+                {% if search_query %}
+                (ค้นหา: "{{ search_query }}")
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,159 +1,279 @@
 {% extends 'base.html' %}
 
-{% block title %}รายการบัตร{% endblock %}
+{% block title %}บัตรพร้อมพิมพ์{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="bi bi-credit-card-2-front"></i> รายการบัตร</h2>
-            <p class="text-muted">บัตรที่สร้างแล้วทั้งหมด</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <span class="badge bg-primary" style="font-size: 1.2rem; padding: 10px 20px;">
-                <i class="bi bi-credit-card"></i> {{ badges.count }} บัตร
-            </span>
+        <div class="col-md-12">
+            <h2><i class="bi bi-printer"></i> บัตรพร้อมพิมพ์</h2>
+            <p class="text-muted">บัตรที่ออกเลขแล้ว พร้อมสำหรับพิมพ์</p>
         </div>
     </div>
 
-    <!-- Search & Filters -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-6">
-                    <input type="text" name="search" class="form-control" placeholder="ค้นหาหมายเลขบัตร, ชื่อ-นามสกุล..." value="{{ search }}">
+    <!-- Badge Number Info Cards -->
+    <div class="row mb-3">
+        {% for info in badge_info %}
+        <div class="col-md-3 mb-2">
+            <div class="card border-start border-4" style="border-color: {{ info.badge_type.color_code }} !important;">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0" style="font-size: 0.9rem;">{{ info.badge_type.name }}</h6>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                <span class="me-2">ล่าสุด: <strong>{{ info.latest_badge_number }}</strong></span>
+                            </div>
+                            <div class="text-success" style="font-size: 0.8rem;">
+                                ถัดไป: <strong>{{ info.next_badge_number }}</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <select name="badge_type" class="form-select">
-                        <option value="">-- ประเภทบัตรทั้งหมด --</option>
-                        {% for bt in badge_types %}
-                        <option value="{{ bt.id }}" {% if selected_badge_type == bt.id|stringformat:"s" %}selected{% endif %}>
-                            {{ bt.name }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Badge Type Tabs -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <ul class="nav nav-pills" id="badgeTypeTabs" role="tablist">
+                {% for data in badge_data %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if data.badge_type.id|stringformat:'s' == active_badge_id %}active{% endif %}"
+                            id="badge-{{ data.badge_type.id }}-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#badge-{{ data.badge_type.id }}"
+                            type="button"
+                            role="tab"
+                            style="background-color: {{ data.badge_type.color_code }}; border-color: {{ data.badge_type.color_code }}; color: black; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
+                        {{ data.badge_type.name }}
+                        <span class="badge bg-light text-dark ms-1">🖨 พิมพ์แล้ว {{ data.printed_count }}/{{ data.total_count }} บัตร</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Search, Filter and Bulk Actions -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="get" class="row g-2">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="ค้นหา: หมายเลขบัตร, ชื่อ, นามสกุล..." value="{{ search }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="department" class="form-select" id="department-filter">
+                        <option value="">-- ทุกหน่วยงาน --</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if dept.id|stringformat:'s' == department_filter %}selected{% endif %}>
+                            {{ dept.name }}
                         </option>
+                        {% empty %}
+                        <!-- DEBUG: No departments found -->
                         {% endfor %}
                     </select>
+                    <!-- DEBUG: departments count = {{ departments|length }} -->
                 </div>
                 <div class="col-md-2">
-                    <select name="printed" class="form-select">
-                        <option value="">-- สถานะทั้งหมด --</option>
-                        <option value="yes" {% if selected_printed == 'yes' %}selected{% endif %}>พิมพ์แล้ว</option>
-                        <option value="no" {% if selected_printed == 'no' %}selected{% endif %}>ยังไม่พิมพ์</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
+                    <button class="btn btn-primary w-100" type="submit">
                         <i class="bi bi-search"></i> ค้นหา
+                    </button>
+                </div>
+                {% if search or department_filter %}
+                <div class="col-12">
+                    <a href="{% url 'badges:badge_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x"></i> ล้างตัวกรอง
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-4 text-end">
+            <button type="button" class="btn btn-warning bulk-action-btn me-2" id="bulk-reset-btn" style="display: none;" data-bs-toggle="modal" data-bs-target="#bulkResetPrintModal">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset การพิมพ์ (<span class="selected-count">0</span>)
+            </button>
+            <button type="button" class="btn btn-danger bulk-action-btn" id="bulk-delete-btn" style="display: none;" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
+                <i class="bi bi-trash"></i> ลบที่เลือก (<span class="selected-count">0</span>)
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="badgeTypeTabsContent">
+        {% for data in badge_data %}
+        <div class="tab-pane fade {% if data.badge_type.id|stringformat:'s' == active_badge_id %}show active{% endif %}"
+             id="badge-{{ data.badge_type.id }}"
+             role="tabpanel">
+
+            <!-- Badges Grid -->
+            <div class="row">
+                {% if data.badges %}
+                    {% for badge in data.badges %}
+                    <div class="col-md-3 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body p-2">
+                                <!-- Header: Checkbox, Badge Number, Menu -->
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-2 pt-1">
+                                    <div>
+                                        <input type="checkbox" class="form-check-input badge-checkbox me-2" value="{{ badge.id }}" data-badge-type="{{ badge.badge_type.id }}">
+                                        <small class="text-muted">{{ badge.badge_number }}</small>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ badge.badge_file.url }}" download onclick="event.stopPropagation();">
+                                                    <i class="bi bi-download"></i> ดาวน์โหลด
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal{{ badge.id }}" onclick="event.stopPropagation();">
+                                                    <i class="bi bi-trash"></i> ลบ
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- Badge Image (Clickable) -->
+                                <a href="{% url 'badges:badge_detail' badge.id %}" class="text-decoration-none">
+                                    <div class="position-relative text-center mb-2">
+                                        {% if badge.badge_file %}
+                                            <img src="{{ badge.badge_file.url }}" alt="Badge" class="img-fluid rounded" style="max-height: 280px; border: 2px solid #ddd;">
+                                            <!-- Status Overlay (ซ้ายบน) -->
+                                            {% if badge.is_printed %}
+                                                <span class="position-absolute top-0 start-0 m-2 badge bg-success rounded-circle" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;" title="พิมพ์แล้ว {{ badge.printed_count }} ครั้ง">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="py-5 bg-light rounded">
+                                                <i class="bi bi-image" style="font-size: 3rem; color: #ccc;"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Badge Info -->
+                                    <div class="px-2">
+                                        <p class="mb-1 text-dark">
+                                            <strong style="font-size: 0.9rem;">{{ badge.staff_profile.full_name }}</strong>
+                                            <small class="text-muted">| {{ badge.staff_profile.position }}</small>
+                                        </p>
+                                        <p class="mb-0">
+                                            <small class="text-muted"><i class="bi bi-building"></i> {{ badge.staff_profile.department.name }}</small>
+                                        </p>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delete Modal -->
+                    <div class="modal fade" id="deleteModal{{ badge.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบบัตร</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="post" action="{% url 'badges:delete_badge' badge.id %}">
+                                    {% csrf_token %}
+                                    <div class="modal-body">
+                                        <div class="alert alert-danger">
+                                            <i class="bi bi-exclamation-triangle-fill"></i>
+                                            <strong>คำเตือน:</strong> การลบบัตรนี้จะไม่สามารถกู้คืนได้!
+                                        </div>
+                                        <p><strong>บัตรที่จะลบ:</strong></p>
+                                        <ul>
+                                            <li>หมายเลข: <strong>{{ badge.badge_number }}</strong></li>
+                                            <li>ชื่อ: <strong>{{ badge.staff_profile.full_name }}</strong></li>
+                                            <li>ประเภท: <strong>{{ badge.badge_type.name }}</strong></li>
+                                        </ul>
+                                        <p class="text-muted">คุณแน่ใจหรือไม่ว่าต้องการลบบัตรนี้?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="bi bi-trash"></i> ยืนยันการลบ
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                            <h5 class="mt-3">
+                                {% if search %}
+                                    ไม่พบผลลัพธ์สำหรับ "{{ search }}"
+                                {% else %}
+                                    ยังไม่มีบัตรในประเภทนี้
+                                {% endif %}
+                            </h5>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Bulk Reset Print Modal -->
+<div class="modal fade" id="bulkResetPrintModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise"></i> ยืนยัน Reset การพิมพ์</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-reset-form" action="{% url 'badges:bulk_reset_print' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>หมายเหตุ:</strong> การ Reset การพิมพ์จะทำให้บัตรกลับมาเป็น "ยังไม่พิมพ์" และจำนวนครั้งที่พิมพ์จะถูกรีเซ็ตเป็น 0
+                    </div>
+                    <p><strong>คุณกำลัง Reset การพิมพ์ของบัตร <span id="bulk-reset-count">0</span> รายการ</strong></p>
+                    <p class="text-muted">บัตรจะยังคงอยู่ แต่สถานะการพิมพ์จะถูกรีเซ็ต</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-counterclockwise"></i> ยืนยัน Reset
                     </button>
                 </div>
             </form>
         </div>
     </div>
-
-    <!-- Badges Grid -->
-    <div class="row">
-        {% if badges %}
-            {% for badge in badges %}
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <!-- Badge Image -->
-                        <div class="text-center mb-3">
-                            {% if badge.badge_file %}
-                                <img src="{{ badge.badge_file.url }}" alt="Badge" class="img-fluid rounded" style="max-height: 300px; border: 2px solid #ddd;">
-                            {% else %}
-                                <div class="py-5 bg-light rounded">
-                                    <i class="bi bi-image" style="font-size: 3rem; color: #ccc;"></i>
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Badge Info -->
-                        <h5 class="card-title">
-                            <span class="badge" style="background-color: {{ badge.badge_type.color_code }};">
-                                {{ badge.badge_number }}
-                            </span>
-                        </h5>
-                        <p class="card-text">
-                            <strong>{{ badge.staff_profile.full_name }}</strong><br>
-                            <small class="text-muted">{{ badge.staff_profile.position }}</small><br>
-                            <small class="text-muted">{{ badge.staff_profile.department.name }}</small>
-                        </p>
-
-                        <!-- Status -->
-                        <div class="mb-3">
-                            {% if badge.is_printed %}
-                                <span class="badge bg-success">
-                                    <i class="bi bi-printer-fill"></i> พิมพ์แล้ว ({{ badge.printed_count }} ครั้ง)
-                                </span>
-                            {% else %}
-                                <span class="badge bg-secondary">
-                                    <i class="bi bi-printer"></i> ยังไม่พิมพ์
-                                </span>
-                            {% endif %}
-                        </div>
-
-                        <!-- Actions -->
-                        <div class="d-grid gap-2">
-                            <a href="{% url 'badges:badge_detail' badge.id %}" class="btn btn-primary btn-sm">
-                                <i class="bi bi-eye"></i> ดูรายละเอียด
-                            </a>
-                            <a href="{{ badge.badge_file.url }}" download class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-download"></i> ดาวน์โหลด
-                            </a>
-                            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ badge.id }}">
-                                <i class="bi bi-trash"></i> ลบบัตร
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-footer text-muted">
-                        <small>
-                            <i class="bi bi-clock"></i> สร้างเมื่อ: {{ badge.created_at|date:"d/m/Y H:i" }}
-                        </small>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="col-12">
-                <div class="text-center py-5">
-                    <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                    <p class="text-muted mt-3">
-                        {% if search %}
-                            ไม่พบผลการค้นหา
-                        {% else %}
-                            ยังไม่มีบัตรในระบบ
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-        {% endif %}
-    </div>
 </div>
 
-<!-- Delete Modals -->
-{% for badge in badges %}
-<div class="modal fade" id="deleteModal{{ badge.id }}" tabindex="-1">
+<!-- Bulk Delete Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> ยืนยันการลบบัตร</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" action="{% url 'badges:delete_badge' badge.id %}">
+            <form method="post" id="bulk-delete-form" action="{% url 'badges:bulk_delete_badge' %}">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="alert alert-danger">
                         <i class="bi bi-exclamation-triangle-fill"></i>
-                        <strong>คำเตือน:</strong> การลบบัตรนี้จะไม่สามารถกู้คืนได้!
+                        <strong>คำเตือน:</strong> การลบบัตรจะไม่สามารถกู้คืนได้!
                     </div>
-                    <p><strong>บัตรที่จะลบ:</strong></p>
-                    <ul>
-                        <li>หมายเลข: <strong>{{ badge.badge_number }}</strong></li>
-                        <li>ชื่อ: <strong>{{ badge.staff_profile.full_name }}</strong></li>
-                        <li>ประเภท: <strong>{{ badge.badge_type.name }}</strong></li>
-                    </ul>
-                    <p class="text-muted">คุณแน่ใจหรือไม่ว่าต้องการลบบัตรนี้?</p>
+                    <p><strong>คุณกำลังลบบัตร <span id="bulk-delete-count">0</span> รายการ</strong></p>
+                    <p class="text-muted">คุณแน่ใจหรือไม่ว่าต้องการลบบัตรที่เลือก?</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
@@ -165,5 +285,169 @@
         </div>
     </div>
 </div>
-{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    // Wait for DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    function init() {
+        console.log('Initializing badge list tab memory and bulk actions...');
+        initTabMemory();
+        restoreActiveTab();
+        initBulkActions();
+    }
+
+    // Tab Memory with localStorage
+    function initTabMemory() {
+        // Listen to all tab button clicks
+        document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function(event) {
+                // Extract badge type ID from tab target
+                const target = event.target.getAttribute('data-bs-target');
+                const badgeTypeId = target.replace('#badge-', '');
+
+                // Save to localStorage
+                localStorage.setItem('badge_list_active_tab', badgeTypeId);
+                console.log('Saved active tab (badge list):', badgeTypeId);
+            });
+        });
+    }
+
+    function restoreActiveTab() {
+        // Get saved tab from localStorage
+        const savedTab = localStorage.getItem('badge_list_active_tab');
+
+        if (savedTab) {
+            // Find and activate the saved tab
+            const tabButton = document.getElementById('badge-' + savedTab + '-tab');
+            if (tabButton) {
+                const tab = new bootstrap.Tab(tabButton);
+                tab.show();
+                console.log('Restored active tab (badge list):', savedTab);
+            }
+        }
+    }
+
+    // Bulk Actions
+    function initBulkActions() {
+        const bulkResetBtn = document.getElementById('bulk-reset-btn');
+        const bulkResetForm = document.getElementById('bulk-reset-form');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+        const bulkDeleteForm = document.getElementById('bulk-delete-form');
+
+        // Listen to all checkboxes
+        document.querySelectorAll('.badge-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('change', updateBulkActions);
+        });
+
+        // Handle bulk reset form submission
+        if (bulkResetForm) {
+            bulkResetForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Get selected badge IDs
+                const selectedIds = [];
+                document.querySelectorAll('.badge-checkbox:checked').forEach(function(checkbox) {
+                    selectedIds.push(checkbox.value);
+                });
+
+                if (selectedIds.length === 0) {
+                    alert('กรุณาเลือกบัตรที่ต้องการ Reset การพิมพ์');
+                    return;
+                }
+
+                // Add hidden inputs to form
+                selectedIds.forEach(function(id) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'badge_ids';
+                    input.value = id;
+                    bulkResetForm.appendChild(input);
+                });
+
+                // Submit form
+                bulkResetForm.submit();
+            });
+        }
+
+        // Handle bulk delete form submission
+        if (bulkDeleteForm) {
+            bulkDeleteForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Get selected badge IDs
+                const selectedIds = [];
+                document.querySelectorAll('.badge-checkbox:checked').forEach(function(checkbox) {
+                    selectedIds.push(checkbox.value);
+                });
+
+                if (selectedIds.length === 0) {
+                    alert('กรุณาเลือกบัตรที่ต้องการลบ');
+                    return;
+                }
+
+                // Add hidden inputs to form
+                selectedIds.forEach(function(id) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'badge_ids';
+                    input.value = id;
+                    bulkDeleteForm.appendChild(input);
+                });
+
+                // Submit form
+                bulkDeleteForm.submit();
+            });
+        }
+
+        // Update bulk reset modal when shown
+        const bulkResetModal = document.getElementById('bulkResetPrintModal');
+        if (bulkResetModal) {
+            bulkResetModal.addEventListener('show.bs.modal', function() {
+                const selectedCount = document.querySelectorAll('.badge-checkbox:checked').length;
+                document.getElementById('bulk-reset-count').textContent = selectedCount;
+            });
+        }
+
+        // Update bulk delete modal when shown
+        const bulkDeleteModal = document.getElementById('bulkDeleteModal');
+        if (bulkDeleteModal) {
+            bulkDeleteModal.addEventListener('show.bs.modal', function() {
+                const selectedCount = document.querySelectorAll('.badge-checkbox:checked').length;
+                document.getElementById('bulk-delete-count').textContent = selectedCount;
+            });
+        }
+    }
+
+    function updateBulkActions() {
+        const selectedCheckboxes = document.querySelectorAll('.badge-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+        const bulkResetBtn = document.getElementById('bulk-reset-btn');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+
+        // Update button visibility and count
+        if (selectedCount > 0) {
+            bulkResetBtn.style.display = 'inline-block';
+            bulkDeleteBtn.style.display = 'inline-block';
+
+            // Update count for both buttons
+            document.querySelectorAll('.selected-count').forEach(function(span) {
+                span.textContent = selectedCount;
+            });
+        } else {
+            bulkResetBtn.style.display = 'none';
+            bulkDeleteBtn.style.display = 'none';
+        }
+    }
+})();
+</script>
 {% endblock %}

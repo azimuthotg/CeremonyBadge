@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+"""
+Migrate Schema to Production Database
+Run Django migrations on CeremonyBadge_Production
+"""
+import os
+import sys
+import subprocess
+import shutil
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def migrate_production():
+    """Run migrations on production database"""
+
+    print("=" * 70)
+    print("  Migrate Schema to Production Database")
+    print("  CeremonyBadge_Production")
+    print("=" * 70)
+    print()
+
+    # Backup .env เดิม
+    env_file = os.path.join(BASE_DIR, '.env')
+    env_backup = os.path.join(BASE_DIR, '.env.backup_temp')
+
+    print("📋 Step 1: Backup current .env file")
+    if os.path.exists(env_file):
+        shutil.copy2(env_file, env_backup)
+        print(f"   ✅ Backed up to: .env.backup_temp")
+
+    # Copy .env.production เป็น .env
+    env_production = os.path.join(BASE_DIR, '.env.production')
+
+    print("📋 Step 2: Switch to production .env")
+    if os.path.exists(env_production):
+        shutil.copy2(env_production, env_file)
+        print(f"   ✅ Using .env.production")
+    else:
+        print(f"   ❌ .env.production not found!")
+        return False
+
+    try:
+        print("📋 Step 3: Run Django migrations")
+        print()
+
+        # Run migrations
+        result = subprocess.run(
+            [sys.executable, 'manage.py', 'migrate'],
+            cwd=BASE_DIR,
+            capture_output=True,
+            text=True
+        )
+
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
+
+        if result.returncode != 0:
+            print(f"   ❌ Migration failed!")
+            return False
+
+        print()
+        print("   ✅ Migrations completed successfully!")
+
+        return True
+
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return False
+
+    finally:
+        # Restore .env เดิม
+        print()
+        print("📋 Step 4: Restore original .env")
+        if os.path.exists(env_backup):
+            shutil.copy2(env_backup, env_file)
+            os.remove(env_backup)
+            print(f"   ✅ Restored original .env")
+
+if __name__ == '__main__':
+    success = migrate_production()
+
+    print()
+    print("=" * 70)
+    if success:
+        print("✅ Schema migrated to CeremonyBadge_Production successfully!")
+    else:
+        print("❌ Migration failed!")
+    print("=" * 70)
+
+    sys.exit(0 if success else 1)

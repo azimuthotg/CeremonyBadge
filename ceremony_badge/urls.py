@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.accounts.views import login_view, logout_view, dashboard_view
+from apps.reports.views import public_status_dashboard
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,15 +30,20 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path('dashboard/', dashboard_view, name='dashboard'),
 
+    # Public Pages (no login required)
+    path('public/status/', public_status_dashboard, name='public_status'),
+
     # Apps URLs
     path('accounts/', include('apps.accounts.urls')),
     path('registry/', include('apps.registry.urls')),
     path('approvals/', include('apps.approvals.urls')),
     path('badges/', include('apps.badges.urls')),
-    # path('reports/', include('apps.reports.urls')),
+    path('reports/', include('apps.reports.urls')),
 ]
 
-# Media files (uploads)
+# Media and Static files (development only)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # In development, serve static files from STATICFILES_DIRS
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    urlpatterns += staticfiles_urlpatterns()

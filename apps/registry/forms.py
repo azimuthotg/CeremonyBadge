@@ -11,18 +11,15 @@ class StaffProfileForm(forms.ModelForm):
     class Meta:
         model = StaffProfile
         fields = [
-            'department', 'title', 'first_name', 'last_name', 'national_id',
+            'department', 'first_line', 'last_line', 'national_id',
             'position', 'badge_type', 'zone',
             'age', 'vehicle_registration',
             'phone', 'email',
-            'vaccine_dose_1', 'vaccine_dose_2', 'vaccine_dose_3', 'vaccine_dose_4',
-            'test_rt_pcr', 'test_atk', 'test_temperature',
             'notes'
         ]
         widgets = {
-            'title': forms.TextInput(attrs={'placeholder': 'เช่น นาย, นาง, น.ส., พล.อ., พล.ต.'}),
-            'first_name': forms.TextInput(attrs={'placeholder': 'ชื่อ'}),
-            'last_name': forms.TextInput(attrs={'placeholder': 'นามสกุล'}),
+            'first_line': forms.TextInput(attrs={'placeholder': 'ยศและชื่อ (ไม่เว้นวรรค) เช่น นายสมชาย, นางสาวสมหญิง'}),
+            'last_line': forms.TextInput(attrs={'placeholder': 'นามสกุล'}),
             'national_id': forms.TextInput(attrs={'placeholder': 'X-XXXX-XXXXX-XX-X', 'maxlength': '13'}),
             'position': forms.TextInput(attrs={'placeholder': 'ตำแหน่ง/หน้าที่'}),
             'age': forms.NumberInput(attrs={'placeholder': 'อายุ', 'min': '0'}),
@@ -33,9 +30,8 @@ class StaffProfileForm(forms.ModelForm):
         }
         labels = {
             'department': 'หน่วยงาน',
-            'title': 'ยศ',
-            'first_name': 'ชื่อ',
-            'last_name': 'นามสกุล',
+            'first_line': 'ยศชื่อ (ไม่เว้นวรรค)',
+            'last_line': 'นามสกุล',
             'national_id': 'บัตรประชาชน ๑๓ หลัก',
             'position': 'ตำแหน่ง/หน้าที่',
             'badge_type': 'ประเภทบัตร',
@@ -44,13 +40,6 @@ class StaffProfileForm(forms.ModelForm):
             'vehicle_registration': 'ทะเบียนรถ',
             'phone': 'เบอร์โทรศัพท์',
             'email': 'อีเมล',
-            'vaccine_dose_1': 'เข็ม ๑',
-            'vaccine_dose_2': 'เข็ม ๒',
-            'vaccine_dose_3': 'เข็ม ๓',
-            'vaccine_dose_4': 'เข็ม ๔',
-            'test_rt_pcr': 'RT-PCR',
-            'test_atk': 'ATK',
-            'test_temperature': 'วัดอุณหภูมิ',
             'notes': 'หมายเหตุ',
         }
 
@@ -59,6 +48,10 @@ class StaffProfileForm(forms.ModelForm):
         user_role = kwargs.pop('user_role', None)
         is_edit_mode = kwargs.pop('is_edit_mode', False)
         super().__init__(*args, **kwargs)
+
+        # Filter departments to show only active ones
+        from apps.accounts.models import Department
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
 
         # Hide department field for submitters (they use their own department)
         if user_role == 'submitter':
@@ -79,9 +72,8 @@ class StaffProfileForm(forms.ModelForm):
                 HTML('<h5 class="mb-3"><i class="bi bi-person-badge"></i> ข้อมูลส่วนตัว</h5>'),
                 'department',  # Hidden field
                 Row(
-                    Column('title', css_class='col-md-2'),
-                    Column('first_name', css_class='col-md-4'),
-                    Column('last_name', css_class='col-md-6'),
+                    Column('first_line', css_class='col-md-6'),
+                    Column('last_line', css_class='col-md-6'),
                 ),
                 'national_id',
             ]
@@ -91,9 +83,8 @@ class StaffProfileForm(forms.ModelForm):
                 'department',
                 HTML('<h5 class="mb-3 mt-4"><i class="bi bi-person-badge"></i> ข้อมูลส่วนตัว</h5>'),
                 Row(
-                    Column('title', css_class='col-md-2'),
-                    Column('first_name', css_class='col-md-4'),
-                    Column('last_name', css_class='col-md-6'),
+                    Column('first_line', css_class='col-md-6'),
+                    Column('last_line', css_class='col-md-6'),
                 ),
                 'national_id',
             ]
@@ -120,19 +111,6 @@ class StaffProfileForm(forms.ModelForm):
             Row(
                 Column('phone', css_class='col-md-6'),
                 Column('email', css_class='col-md-6'),
-            ),
-            HTML('<h5 class="mb-3 mt-4"><i class="bi bi-shield-check"></i> การรับวัคซีน</h5>'),
-            Row(
-                Column('vaccine_dose_1', css_class='col-md-3'),
-                Column('vaccine_dose_2', css_class='col-md-3'),
-                Column('vaccine_dose_3', css_class='col-md-3'),
-                Column('vaccine_dose_4', css_class='col-md-3'),
-            ),
-            HTML('<h5 class="mb-3 mt-4"><i class="bi bi-clipboard-pulse"></i> การตรวจโควิดก่อนการปฏิบัติงาน</h5>'),
-            Row(
-                Column('test_rt_pcr', css_class='col-md-4'),
-                Column('test_atk', css_class='col-md-4'),
-                Column('test_temperature', css_class='col-md-4'),
             ),
             HTML('<h5 class="mb-3 mt-4"><i class="bi bi-chat-left-text"></i> หมายเหตุ</h5>'),
             'notes',
@@ -259,8 +237,26 @@ class ExcelImportForm(forms.Form):
         help_text='รองรับไฟล์ .xlsx เท่านั้น',
         widget=forms.FileInput(attrs={
             'accept': '.xlsx',
-            'class': 'form-control'
+            'class': 'form-control',
+            'id': 'id_excel_file'
         })
+    )
+
+    sheet_name = forms.CharField(
+        label='เลือก Sheet',
+        help_text='เลือก sheet ที่ต้องการ import ข้อมูล',
+        required=False,  # ไม่บังคับในกรณีมี 1 sheet
+        widget=forms.TextInput(attrs={
+            'type': 'hidden',  # ซ่อนไว้ เพราะเราใช้ custom dropdown ใน template
+            'id': 'id_sheet_name_hidden'
+        })
+    )
+
+    department = forms.ModelChoiceField(
+        queryset=None,  # จะ set ใน __init__
+        label='หน่วยงาน',
+        help_text='เลือกหน่วยงานที่ข้อมูลเป็นของ (กรณีนำเข้าให้หน่วยงานอื่น)',
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
 
     badge_type = forms.ModelChoiceField(
@@ -284,6 +280,7 @@ class ExcelImportForm(forms.Form):
         # Import models ที่นี่เพื่อหลีกเลี่ยง circular import
         from apps.badges.models import BadgeType
         from apps.registry.models import Zone
+        from apps.accounts.models import Department
         from django.db.models import Case, When, IntegerField
 
         # Set queryset สำหรับ dropdown
@@ -296,6 +293,7 @@ class ExcelImportForm(forms.Form):
             default=5,
             output_field=IntegerField(),
         )
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
         self.fields['badge_type'].queryset = BadgeType.objects.filter(is_active=True).order_by(badge_order)
         self.fields['zone'].queryset = Zone.objects.filter(is_active=True)
 
@@ -317,6 +315,16 @@ class ExcelImportForm(forms.Form):
                 </div>
             '''),
             'excel_file',
+            HTML('''
+                <div id="sheet-selector-container" style="display:none;" class="mt-3 mb-3">
+                    <label class="form-label">เลือก Sheet <span class="asteriskField">*</span></label>
+                    <select id="sheet_name_dropdown" class="form-select" name="sheet_name">
+                        <option value="">-- เลือก Sheet --</option>
+                    </select>
+                    <div class="form-text">เลือก sheet ที่ต้องการ import ข้อมูล</div>
+                </div>
+            '''),
+            'department',
             Row(
                 Column('badge_type', css_class='col-md-6'),
                 Column('zone', css_class='col-md-6'),

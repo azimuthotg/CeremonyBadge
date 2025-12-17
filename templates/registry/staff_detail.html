@@ -14,11 +14,11 @@
                 <i class="bi bi-arrow-left"></i> ย้อนกลับ
             </a>
             {% if not badge_request %}
-            <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-primary">
+            <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-secondary">
                 <i class="bi bi-pencil"></i> แก้ไข
             </a>
             {% elif badge_request.status == 'draft' or badge_request.status == 'photo_uploaded' or badge_request.status == 'ready_to_submit' or badge_request.status == 'rejected' %}
-            <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-primary">
+            <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-secondary">
                 <i class="bi bi-pencil"></i> แก้ไข
             </a>
             {% endif %}
@@ -29,7 +29,7 @@
         <!-- Left Column - Photo and Basic Info -->
         <div class="col-md-4">
             <!-- Photo Card -->
-            <div class="card mb-4">
+            <div class="card mb-4 border-start border-4" style="border-color: {{ staff_profile.badge_type.color_code }} !important;">
                 <div class="card-body text-center">
                     {% if photo.cropped_photo %}
                         <img src="{{ photo.cropped_photo.url }}" alt="Photo" class="img-fluid rounded mb-3" style="max-width: 100%;">
@@ -61,23 +61,23 @@
             </div>
 
             <!-- Actions Card -->
-            <div class="card">
-                <div class="card-header">
+            <div class="card border-start border-4" style="border-color: {{ staff_profile.badge_type.color_code }} !important;">
+                <div class="card-header badge-header-{{ staff_profile.badge_type.color }}">
                     <strong><i class="bi bi-lightning-charge-fill"></i> การดำเนินการ</strong>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         {% if not badge_request %}
-                        <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-primary">
+                        <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-secondary">
                             <i class="bi bi-pencil"></i> แก้ไขข้อมูล
                         </a>
                         {% if staff_profile.badge_type.requires_photo %}
                             {% if photo %}
-                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-primary">
+                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-camera"></i> เปลี่ยนรูปถ่าย
                             </a>
                             {% else %}
-                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-warning">
+                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-camera"></i> อัปโหลดรูปถ่าย
                             </a>
                             {% endif %}
@@ -87,16 +87,16 @@
                             </button>
                         {% endif %}
                         {% elif badge_request.status == 'draft' or badge_request.status == 'photo_uploaded' or badge_request.status == 'ready_to_submit' or badge_request.status == 'rejected' %}
-                        <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-primary">
+                        <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-secondary">
                             <i class="bi bi-pencil"></i> แก้ไขข้อมูล
                         </a>
                         {% if staff_profile.badge_type.requires_photo %}
                             {% if photo %}
-                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-primary">
+                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-camera"></i> เปลี่ยนรูปถ่าย
                             </a>
                             {% else %}
-                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-warning">
+                            <a href="{% url 'registry:wizard_step2' staff_profile.id %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-camera"></i> อัปโหลดรูปถ่าย
                             </a>
                             {% endif %}
@@ -106,10 +106,16 @@
                             </button>
                         {% endif %}
 
-                        {% if badge_request.status == 'ready_to_submit' or badge_request.status == 'rejected' %}
+                        {% if badge_request.status == 'ready_to_submit' or badge_request.status == 'rejected' or badge_request.status == 'photo_uploaded' %}
                         <a href="{% url 'registry:wizard_submit' badge_request.id %}" class="btn btn-success">
                             <i class="bi bi-send"></i> ส่งคำขอ
                         </a>
+                        {% elif badge_request.status == 'draft' %}
+                            {% if not staff_profile.badge_type.requires_photo %}
+                            <a href="{% url 'registry:wizard_submit' badge_request.id %}" class="btn btn-success">
+                                <i class="bi bi-send"></i> ส่งคำขอ
+                            </a>
+                            {% endif %}
                         {% endif %}
                         {% else %}
                         <div class="alert alert-warning mb-0">
@@ -125,21 +131,15 @@
         <!-- Right Column - Detailed Information -->
         <div class="col-md-8">
             <!-- Main Information Card -->
-            <div class="card mb-3">
-                <div class="card-header">
+            <div class="card mb-3 border-start border-4" style="border-color: {{ staff_profile.badge_type.color_code }} !important;">
+                <div class="card-header badge-header-{{ staff_profile.badge_type.color }}">
                     <strong><i class="bi bi-person-vcard"></i> ข้อมูลบุคลากร</strong>
                 </div>
                 <div class="card-body">
                     <!-- Personal Info -->
                     <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">ยศ:</small></div>
-                        <div class="col-md-4">{{ staff_profile.title|default:"-" }}</div>
-                        <div class="col-md-2"><small class="text-muted">ชื่อ:</small></div>
-                        <div class="col-md-4">{{ staff_profile.first_name }}</div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">นามสกุล:</small></div>
-                        <div class="col-md-4">{{ staff_profile.last_name }}</div>
+                        <div class="col-md-2"><small class="text-muted">ชื่อ-นามสกุล:</small></div>
+                        <div class="col-md-4"><strong>{{ staff_profile.first_line }} {{ staff_profile.last_line }}</strong></div>
                         <div class="col-md-2"><small class="text-muted">บัตรประชาชน:</small></div>
                         <div class="col-md-4">{{ staff_profile.national_id|default:"-" }}</div>
                     </div>
@@ -209,28 +209,6 @@
                         <div class="col-md-2"><small class="text-muted">อีเมล:</small></div>
                         <div class="col-md-4">{{ staff_profile.email|default:"-" }}</div>
                     </div>
-                    <hr>
-                    <!-- Vaccine & Test -->
-                    <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">การรับวัคซีน:</small></div>
-                        <div class="col-md-10">
-                            {% if staff_profile.vaccine_dose_1 %}<span class="badge bg-success me-1">เข็ม 1</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_2 %}<span class="badge bg-success me-1">เข็ม 2</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_3 %}<span class="badge bg-success me-1">เข็ม 3</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_4 %}<span class="badge bg-success me-1">เข็ม 4</span>{% endif %}
-                            {% if not staff_profile.vaccine_dose_1 and not staff_profile.vaccine_dose_2 and not staff_profile.vaccine_dose_3 and not staff_profile.vaccine_dose_4 %}<span class="text-muted">-</span>{% endif %}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-2"><small class="text-muted">การตรวจโควิดก่อนการปฏิบัติงาน:</small></div>
-                        <div class="col-md-10">
-                            {% if staff_profile.test_rt_pcr %}<span class="badge bg-info me-1">RT-PCR</span>{% endif %}
-                            {% if staff_profile.test_atk %}<span class="badge bg-info me-1">ATK</span>{% endif %}
-                            {% if staff_profile.test_temperature %}<span class="badge bg-info me-1">วัดอุณหภูมิ</span>{% endif %}
-                            {% if not staff_profile.test_rt_pcr and not staff_profile.test_atk and not staff_profile.test_temperature %}<span class="text-muted">-</span>{% endif %}
-                        </div>
-                    </div>
-
                     <!-- Notes -->
                     {% if staff_profile.notes %}
                     <hr>
@@ -244,8 +222,8 @@
 
             <!-- Request Status -->
             {% if badge_request %}
-            <div class="card mt-3">
-                <div class="card-header">
+            <div class="card mt-3 border-start border-4" style="border-color: {{ staff_profile.badge_type.color_code }} !important;">
+                <div class="card-header badge-header-{{ staff_profile.badge_type.color }}">
                     <strong><i class="bi bi-clock-history"></i> ประวัติคำขอ</strong>
                 </div>
                 <div class="card-body">

@@ -36,7 +36,7 @@ class BadgeTemplateAdmin(admin.ModelAdmin):
 class BadgeAdmin(admin.ModelAdmin):
     list_display = ['badge_number', 'staff_profile', 'badge_type', 'is_printed', 'printed_count', 'is_active', 'created_at']
     list_filter = ['badge_type', 'is_printed', 'is_active', 'created_at']
-    search_fields = ['badge_number', 'staff_profile__first_name', 'staff_profile__last_name', 'qr_data']
+    search_fields = ['badge_number', 'staff_profile__first_line', 'staff_profile__last_line', 'qr_data']
     ordering = ['-created_at']
     date_hierarchy = 'created_at'
     readonly_fields = ['qr_code', 'qr_data', 'qr_signature', 'badge_file']

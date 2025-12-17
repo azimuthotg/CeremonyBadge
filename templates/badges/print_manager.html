@@ -1,0 +1,816 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}พิมพ์บัตร A4{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-printer-fill"></i> พิมพ์บัตร (A4 Layout)</h2>
+            <p class="text-muted">เลือกบัตรสูงสุด 8 ใบ สามารถเลือกจากหลายสีมาพิมพ์ในแผ่นเดียวกันได้</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Badge Selection -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <strong><i class="bi bi-grid-3x3-gap-fill"></i> เลือกบัตรที่ต้องการพิมพ์</strong>
+                </div>
+                <div class="card-body">
+                    <!-- Tabs for Badge Types -->
+                    <ul class="nav nav-tabs" id="badgeTypeTabs" role="tablist">
+                        {% for badge_type in badge_types %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if forloop.first %}active{% endif %}"
+                                    id="tab-{{ badge_type.color }}"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#content-{{ badge_type.color }}"
+                                    type="button"
+                                    role="tab"
+                                    style="border-bottom: 3px solid {{ badge_type.color_code }};">
+                                <i class="bi bi-award-fill" style="color: {{ badge_type.color_code }};"></i>
+                                {{ badge_type.name }}
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content mt-3" id="badgeTypeTabContent">
+                        {% for badge_type in badge_types %}
+                        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                             id="content-{{ badge_type.color }}"
+                             role="tabpanel">
+
+                            {% with badges_info=badges_by_type|get_item:badge_type.color %}
+                            {% if badges_info.badges %}
+
+                            <!-- Two Sections: Search & Filter + Actions -->
+                            <div class="card mb-3" style="border-left: 4px solid {{ badge_type.color_code }};">
+                                <div class="card-body p-3">
+                                    <!-- Section 1: ค้นหาและกรอง -->
+                                    <div class="mb-3">
+                                        <h6 class="mb-2 text-muted" style="font-size: 0.85rem;">
+                                            <i class="bi bi-funnel"></i> ค้นหาและกรอง
+                                        </h6>
+                                        <div class="row g-2">
+                                            <div class="col-md-5">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                                    <input type="text"
+                                                           class="form-control search-badge-input"
+                                                           data-badge-color="{{ badge_type.color }}"
+                                                           placeholder="ค้นหา: หมายเลขบัตร, ชื่อ-นามสกุล..."
+                                                           autocomplete="off">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <select class="form-select form-select-sm filter-department-select"
+                                                        data-badge-color="{{ badge_type.color }}">
+                                                    <option value="">-- ทุกหน่วยงาน --</option>
+                                                    {% for dept in departments %}
+                                                    <option value="{{ dept.id }}" {% if dept.id|stringformat:'s' == department_filter %}selected{% endif %}>
+                                                        {{ dept.name }}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select class="form-select form-select-sm filter-status-select"
+                                                        data-badge-color="{{ badge_type.color }}">
+                                                    <option value="all">ทั้งหมด ({{ badges_info.total_count }})</option>
+                                                    <option value="unprinted" selected>ยังไม่พิมพ์ ({{ badges_info.unprinted_count }})</option>
+                                                    <option value="printed">พิมพ์แล้ว ({{ badges_info.printed_count }})</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Section 2: การดำเนินการ -->
+                                    <div>
+                                        <h6 class="mb-2 text-muted" style="font-size: 0.85rem;">
+                                            <i class="bi bi-lightning-fill"></i> การดำเนินการ
+                                        </h6>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-success quick-add-visible"
+                                                    data-badge-color="{{ badge_type.color }}">
+                                                <i class="bi bi-cart-plus-fill"></i>
+                                                <span class="quick-add-text">เลือกที่มองเห็น</span>
+                                                <span class="badge bg-light text-dark ms-1 visible-count"
+                                                      data-badge-color="{{ badge_type.color }}">0</span>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary clear-search-btn"
+                                                    data-badge-color="{{ badge_type.color }}"
+                                                    style="display: none;">
+                                                <i class="bi bi-x-circle"></i> ล้างการค้นหา
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead>
+                                        <tr style="background-color: {{ badge_type.color_code }}20;">
+                                            <th style="width: 50px;">#</th>
+                                            <th>หมายเลข</th>
+                                            <th>ชื่อ-นามสกุล</th>
+                                            <th>หน่วยงาน</th>
+                                            <th style="width: 60px;" class="text-center">พิมพ์</th>
+                                            <th style="width: 120px;">การดำเนินการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="badge-table-body" data-badge-color="{{ badge_type.color }}">
+                                        {% for badge in badges_info.badges %}
+                                        <tr class="badge-row"
+                                            data-printed="{% if badge.is_printed %}printed{% else %}unprinted{% endif %}"
+                                            data-department-id="{{ badge.staff_profile.department.id }}"
+                                            data-badge-number="{{ badge.badge_number }}"
+                                            data-staff-name="{{ badge.staff_profile.full_name }}">
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>
+                                                <span class="badge" style="background-color: {{ badge_type.color_code }};">
+                                                    {{ badge.badge_number }}
+                                                </span>
+                                            </td>
+                                            <td>{{ badge.staff_profile.full_name }}</td>
+                                            <td><small>{{ badge.staff_profile.department.name }}</small></td>
+                                            <td class="text-center">
+                                                {% if badge.is_printed %}
+                                                    <span class="badge bg-success fs-6">{{ badge.printed_count }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-secondary add-to-cart"
+                                                        data-badge-id="{{ badge.id }}"
+                                                        data-badge-number="{{ badge.badge_number }}"
+                                                        data-staff-name="{{ badge.staff_profile.full_name }}"
+                                                        data-badge-type="{{ badge_type.name }}"
+                                                        data-badge-color="{{ badge_type.color_code }}"
+                                                        data-image-url="{% if badge.badge_file %}{{ badge.badge_file.url }}{% endif %}">
+                                                    <i class="bi bi-cart-plus"></i> เพิ่ม
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> ไม่มีบัตร{{ badge_type.name }}
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Shopping Cart -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-header bg-success text-white">
+                    <strong><i class="bi bi-cart-fill"></i> รายการพิมพ์</strong>
+                    <span class="badge bg-light text-dark ms-2" id="cart-count">0/8</span>
+                </div>
+                <div class="card-body">
+                    <!-- Cart Items -->
+                    <div id="cart-items" class="mb-3">
+                        <div class="text-center text-muted py-4" id="cart-empty-message">
+                            <i class="bi bi-cart-x" style="font-size: 3rem;"></i>
+                            <p class="mt-2">ยังไม่ได้เลือกบัตร</p>
+                            <small>เลือกบัตรจากรายการด้านซ้าย</small>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary" id="btn-clear-cart" disabled>
+                            <i class="bi bi-trash"></i> ล้างรายการ
+                        </button>
+                        <button class="btn btn-outline-secondary" id="btn-preview" disabled>
+                            <i class="bi bi-eye"></i> Preview
+                        </button>
+                        <button class="btn btn-success" id="btn-download-pdf" disabled>
+                            <i class="bi bi-file-pdf"></i> ดาวน์โหลด PDF
+                        </button>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="alert alert-light mt-3 mb-0">
+                        <small>
+                            <i class="bi bi-lightbulb"></i> <strong>คำแนะนำ:</strong><br>
+                            • เลือกบัตรได้สูงสุด 8 ใบ<br>
+                            • สามารถผสมหลายสีในแผ่นเดียวได้<br>
+                            • ลากเพื่อเรียงลำดับ
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-file-pdf"></i> Preview PDF (A4 Layout - <span id="preview-badge-count">0</span> บัตร)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="height: calc(100vh - 120px);">
+                <div id="preview-content" class="text-center h-100 d-flex align-items-center justify-content-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">กำลังโหลด...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> ปิด
+                </button>
+                <button type="button" class="btn btn-success" id="btn-download-from-preview">
+                    <i class="bi bi-download"></i> ดาวน์โหลด PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.badge-row:hover {
+    background-color: #f8f9fa;
+}
+
+#cart-items {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.cart-item {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background-color: #fff;
+}
+
+.cart-item-number {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.cart-item-remove {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.2rem;
+}
+
+.cart-item-remove:hover {
+    color: #a71d2a;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    // Shopping Cart
+    window.cart = [];
+    const MAX_BADGES = 8;
+
+    // Wait for DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    function init() {
+        console.log('Initializing system...');
+        initCart();
+        initFilters();
+        initSearch();
+        initQuickActions();
+        initTabMemory();
+        restoreActiveTab();
+        console.log('System initialized');
+    }
+
+    // Tab Memory with localStorage
+    function initTabMemory() {
+        // Listen to all tab button clicks
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function(event) {
+                // Extract badge color from tab target
+                const target = event.target.getAttribute('data-bs-target');
+                const badgeColor = target.replace('#content-', '');
+
+                // Save to localStorage
+                localStorage.setItem('print_manager_active_tab', badgeColor);
+                console.log('Saved active tab:', badgeColor);
+            });
+        });
+    }
+
+    function restoreActiveTab() {
+        // Get saved tab from localStorage
+        const savedTab = localStorage.getItem('print_manager_active_tab');
+
+        if (savedTab) {
+            // Find and activate the saved tab
+            const tabButton = document.getElementById('tab-' + savedTab);
+            if (tabButton) {
+                const tab = new bootstrap.Tab(tabButton);
+                tab.show();
+                console.log('Restored active tab:', savedTab);
+            }
+        }
+    }
+
+    function initCart() {
+        // Setup add buttons
+        document.querySelectorAll('.add-to-cart').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                addToCart(this);
+            });
+        });
+
+        // Setup clear button
+        const btnClear = document.getElementById('btn-clear-cart');
+        if (btnClear) {
+            btnClear.addEventListener('click', clearCart);
+        }
+
+        // Setup preview button
+        const btnPreview = document.getElementById('btn-preview');
+        if (btnPreview) {
+            btnPreview.addEventListener('click', showPreview);
+        }
+
+        // Setup download buttons
+        const btnDownload = document.getElementById('btn-download-pdf');
+        if (btnDownload) {
+            btnDownload.addEventListener('click', downloadPDF);
+        }
+
+        const btnDownloadPreview = document.getElementById('btn-download-from-preview');
+        if (btnDownloadPreview) {
+            btnDownloadPreview.addEventListener('click', function() {
+                // Download from preview
+                if (window.previewPdfUrl) {
+                    const a = document.createElement('a');
+                    a.href = window.previewPdfUrl;
+                    a.download = 'badges_' + window.cart.length + '_items_' + new Date().getTime() + '.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                    alert('ดาวน์โหลด PDF เรียบร้อยแล้ว!');
+                } else {
+                    alert('กรุณาสร้าง Preview ก่อน');
+                }
+            });
+        }
+
+        updateCart();
+    }
+
+    function initFilters() {
+        // Setup status filter dropdowns
+        document.querySelectorAll('.filter-status-select').forEach(function(select) {
+            select.addEventListener('change', function() {
+                const badgeColor = this.dataset.badgeColor;
+                applyFilters(badgeColor);
+            });
+        });
+
+        // Setup department filter dropdowns
+        document.querySelectorAll('.filter-department-select').forEach(function(select) {
+            select.addEventListener('change', function() {
+                const badgeColor = this.dataset.badgeColor;
+                applyFilters(badgeColor);
+            });
+        });
+
+        // Apply default filter (unprinted) on page load
+        document.querySelectorAll('.filter-status-select').forEach(function(select) {
+            const badgeColor = select.dataset.badgeColor;
+            applyFilters(badgeColor);
+        });
+    }
+
+    function applyFilters(badgeColor) {
+        // Get current filter from dropdown
+        const filterSelect = document.querySelector('.filter-status-select[data-badge-color="' + badgeColor + '"]');
+        const filter = filterSelect ? filterSelect.value : 'unprinted';
+
+        // Get department filter
+        const departmentSelect = document.querySelector('.filter-department-select[data-badge-color="' + badgeColor + '"]');
+        const departmentFilter = departmentSelect ? departmentSelect.value : '';
+
+        // Get search term
+        const searchInput = document.querySelector('.search-badge-input[data-badge-color="' + badgeColor + '"]');
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+        // Find the table body for this badge type
+        const tbody = document.querySelector('.badge-table-body[data-badge-color="' + badgeColor + '"]');
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('.badge-row');
+        let visibleCount = 0;
+
+        rows.forEach(function(row) {
+            const printedStatus = row.dataset.printed;
+            const departmentId = row.dataset.departmentId;
+            let shouldShow = false;
+
+            // Apply print status filter
+            if (filter === 'all') {
+                shouldShow = true;
+            } else if (filter === 'unprinted' && printedStatus === 'unprinted') {
+                shouldShow = true;
+            } else if (filter === 'printed' && printedStatus === 'printed') {
+                shouldShow = true;
+            }
+
+            // Apply department filter
+            if (shouldShow && departmentFilter) {
+                shouldShow = (departmentId === departmentFilter);
+            }
+
+            // Apply search filter
+            if (shouldShow && searchTerm) {
+                const text = row.textContent.toLowerCase();
+                shouldShow = text.includes(searchTerm);
+            }
+
+            if (shouldShow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show message if no results
+        const table = tbody.closest('.table-responsive');
+        let noResultsMsg = table.querySelector('.no-results-message');
+
+        if (visibleCount === 0) {
+            if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.className = 'alert alert-warning no-results-message mt-2';
+                noResultsMsg.innerHTML = '<i class="bi bi-info-circle"></i> ไม่พบรายการตามเงื่อนไขที่เลือก';
+                table.appendChild(noResultsMsg);
+            }
+        } else {
+            if (noResultsMsg) {
+                noResultsMsg.remove();
+            }
+        }
+
+        // Update visible count badge
+        updateVisibleCount(badgeColor, visibleCount);
+    }
+
+    function updateVisibleCount(badgeColor, count) {
+        const countBadge = document.querySelector('.visible-count[data-badge-color="' + badgeColor + '"]');
+        if (countBadge) {
+            countBadge.textContent = count;
+        }
+    }
+
+    function initSearch() {
+        // Setup search inputs
+        document.querySelectorAll('.search-badge-input').forEach(function(input) {
+            const badgeColor = input.dataset.badgeColor;
+            const clearBtn = document.querySelector('.clear-search-btn[data-badge-color="' + badgeColor + '"]');
+
+            // Real-time search
+            input.addEventListener('input', function() {
+                applyFilters(badgeColor);
+
+                // Show/hide clear button
+                if (clearBtn) {
+                    clearBtn.style.display = this.value ? 'block' : 'none';
+                }
+            });
+
+            // Clear button
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    input.value = '';
+                    this.style.display = 'none';
+                    applyFilters(badgeColor);
+                    input.focus();
+                });
+            }
+        });
+    }
+
+    function initQuickActions() {
+        // Quick add visible badges
+        document.querySelectorAll('.quick-add-visible').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const badgeColor = this.dataset.badgeColor;
+                const tbody = document.querySelector('.badge-table-body[data-badge-color="' + badgeColor + '"]');
+                if (!tbody) return;
+
+                const visibleRows = Array.from(tbody.querySelectorAll('.badge-row')).filter(function(row) {
+                    return row.style.display !== 'none';
+                });
+
+                let addedCount = 0;
+                let skippedCount = 0;
+
+                visibleRows.forEach(function(row) {
+                    if (window.cart.length >= MAX_BADGES) {
+                        skippedCount++;
+                        return;
+                    }
+
+                    const addBtn = row.querySelector('.add-to-cart');
+                    if (!addBtn) return;
+
+                    const badgeId = addBtn.dataset.badgeId;
+
+                    // Check if already in cart
+                    if (window.cart.find(function(item) { return item.id === badgeId; })) {
+                        skippedCount++;
+                        return;
+                    }
+
+                    // Add to cart
+                    window.cart.push({
+                        id: badgeId,
+                        number: addBtn.dataset.badgeNumber,
+                        name: addBtn.dataset.staffName,
+                        type: addBtn.dataset.badgeType,
+                        color: addBtn.dataset.badgeColor,
+                        image: addBtn.dataset.imageUrl
+                    });
+
+                    addedCount++;
+                });
+
+                updateCart();
+
+                if (addedCount > 0) {
+                    alert('เพิ่มบัตร ' + addedCount + ' ใบลงตะกร้า' + (skippedCount > 0 ? ' (ข้าม ' + skippedCount + ' ใบ)' : ''));
+                } else if (skippedCount > 0) {
+                    alert('ไม่สามารถเพิ่มได้ (มีในตะกร้าแล้วหรือเต็ม)');
+                } else {
+                    alert('ไม่มีบัตรที่สามารถเพิ่มได้');
+                }
+            });
+        });
+    }
+
+    function addToCart(button) {
+        const badgeId = button.dataset.badgeId;
+        const badgeNumber = button.dataset.badgeNumber;
+        const staffName = button.dataset.staffName;
+        const badgeType = button.dataset.badgeType;
+        const badgeColor = button.dataset.badgeColor;
+        const imageUrl = button.dataset.imageUrl;
+
+        // Check if already in cart
+        if (window.cart.find(item => item.id === badgeId)) {
+            alert('บัตรนี้อยู่ในรายการแล้ว');
+            return;
+        }
+
+        // Check if cart is full
+        if (window.cart.length >= MAX_BADGES) {
+            alert('เลือกได้สูงสุด ' + MAX_BADGES + ' บัตรเท่านั้น');
+            return;
+        }
+
+        // Add to cart
+        window.cart.push({
+            id: badgeId,
+            number: badgeNumber,
+            name: staffName,
+            type: badgeType,
+            color: badgeColor,
+            image: imageUrl
+        });
+
+        updateCart();
+
+        // Visual feedback
+        button.innerHTML = '<i class="bi bi-check-circle-fill"></i> เพิ่มแล้ว';
+        button.disabled = true;
+        setTimeout(function() {
+            button.innerHTML = '<i class="bi bi-cart-plus"></i> เพิ่ม';
+            button.disabled = false;
+        }, 1000);
+    }
+
+    window.removeFromCart = function(index) {
+        window.cart.splice(index, 1);
+        updateCart();
+    };
+
+    function clearCart() {
+        if (confirm('ต้องการล้างรายการทั้งหมดหรือไม่?')) {
+            window.cart = [];
+            updateCart();
+        }
+    }
+
+    function updateCart() {
+        const cartItems = document.getElementById('cart-items');
+        const cartCount = document.getElementById('cart-count');
+        const emptyMessage = document.getElementById('cart-empty-message');
+        const btnClear = document.getElementById('btn-clear-cart');
+        const btnPreview = document.getElementById('btn-preview');
+        const btnDownload = document.getElementById('btn-download-pdf');
+
+        // Update count
+        if (cartCount) {
+            cartCount.textContent = window.cart.length + '/' + MAX_BADGES;
+        }
+
+        // Update buttons
+        const hasItems = window.cart.length > 0;
+        if (btnClear) btnClear.disabled = !hasItems;
+        if (btnPreview) btnPreview.disabled = !hasItems;
+        if (btnDownload) btnDownload.disabled = !hasItems;
+
+        // Show/hide empty message
+        if (window.cart.length === 0) {
+            if (emptyMessage) emptyMessage.style.display = 'block';
+            if (cartItems) {
+                cartItems.innerHTML = '';
+                if (emptyMessage) cartItems.appendChild(emptyMessage);
+            }
+            return;
+        }
+
+        if (emptyMessage) emptyMessage.style.display = 'none';
+
+        // Render cart items
+        const cartHTML = window.cart.map(function(item, index) {
+            return '<div class="cart-item">' +
+                '<div class="d-flex justify-content-between align-items-center">' +
+                '<div class="flex-grow-1">' +
+                '<div>' +
+                '<span class="badge" style="background-color: ' + item.color + '; color: #000; font-weight: 600;">' +
+                (index + 1) + '. ' + item.number +
+                '</span>' +
+                '</div>' +
+                '<div class="text-muted" style="font-size: 0.85rem; margin-top: 3px;">' + item.name + '</div>' +
+                '</div>' +
+                '<button class="cart-item-remove" onclick="removeFromCart(' + index + ')">' +
+                '<i class="bi bi-x-circle-fill"></i>' +
+                '</button>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+
+        if (cartItems) {
+            cartItems.innerHTML = cartHTML;
+        }
+    }
+
+    function showPreview() {
+        if (window.cart.length === 0) {
+            alert('กรุณาเลือกบัตรก่อน');
+            return;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        const previewContent = document.getElementById('preview-content');
+        const badgeCountSpan = document.getElementById('preview-badge-count');
+
+        // Show loading
+        if (previewContent) {
+            previewContent.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">กำลังสร้าง PDF...</span></div>' +
+                '<p class="mt-3 text-muted">กำลังสร้าง PDF กรุณารอสักครู่...</p>';
+        }
+        if (badgeCountSpan) {
+            badgeCountSpan.textContent = window.cart.length;
+        }
+
+        modal.show();
+
+        // Generate PDF for preview
+        const badgeIds = window.cart.map(function(item) { return item.id; });
+
+        fetch("{% url 'badges:generate_print_pdf' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ badge_ids: badgeIds })
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                return response.json().then(function(data) {
+                    throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                });
+            }
+            return response.blob();
+        })
+        .then(function(blob) {
+            // Create blob URL
+            const url = window.URL.createObjectURL(blob);
+            window.previewPdfUrl = url; // Store for download button
+
+            // Show PDF in iframe
+            const iframe = '<iframe src="' + url + '" style="width: 100%; height: 100%; border: none;"></iframe>';
+            if (previewContent) {
+                previewContent.innerHTML = iframe;
+            }
+        })
+        .catch(function(error) {
+            if (previewContent) {
+                previewContent.innerHTML = '<div class="alert alert-danger m-4">' +
+                    '<i class="bi bi-exclamation-triangle-fill"></i> ' +
+                    '<strong>เกิดข้อผิดพลาด:</strong> ' + error.message +
+                    '</div>';
+            }
+        });
+    }
+
+    function downloadPDF() {
+        if (window.cart.length === 0) {
+            alert('กรุณาเลือกบัตรก่อน');
+            return;
+        }
+
+        const badgeIds = window.cart.map(function(item) { return item.id; });
+        const btn = document.getElementById('btn-download-pdf');
+        const originalHtml = btn ? btn.innerHTML : '';
+
+        if (btn) {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังสร้าง PDF...';
+            btn.disabled = true;
+        }
+
+        fetch("{% url 'badges:generate_print_pdf' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ badge_ids: badgeIds })
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                return response.json().then(function(data) {
+                    throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                });
+            }
+            return response.blob();
+        })
+        .then(function(blob) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'badges_' + window.cart.length + '_items_' + new Date().getTime() + '.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            alert('ดาวน์โหลด PDF เรียบร้อยแล้ว!');
+            window.cart = [];
+            updateCart();
+        })
+        .catch(function(error) {
+            alert('เกิดข้อผิดพลาด: ' + error.message);
+        })
+        .finally(function() {
+            if (btn) {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

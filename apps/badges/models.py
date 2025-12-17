@@ -37,6 +37,7 @@ class BadgeType(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_color_display()})"
 
+    @property
     def requires_photo(self):
         """ตรวจสอบว่าประเภทบัตรนี้ต้องการรูปภาพหรือไม่"""
         # Yellow และ Green ไม่ต้องมีรูป
@@ -129,6 +130,19 @@ class Badge(models.Model):
         blank=True,
         related_name='badges',
         verbose_name="ผู้เซ็น"
+    )
+
+    # Revision tracking fields
+    revision_count = models.IntegerField(
+        default=0,
+        verbose_name="จำนวนครั้งที่แก้ไข",
+        help_text="นับจำนวนครั้งที่มีการแก้ไขบัตรหลังจากออกเลขแล้ว"
+    )
+    revision_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="เหตุผลในการแก้ไขล่าสุด",
+        help_text="บันทึกเหตุผลการแก้ไขครั้งล่าสุด เช่น ชื่อยาว, เปลี่ยนโซน, เปลี่ยนสีบัตร"
     )
 
     created_by = models.ForeignKey(

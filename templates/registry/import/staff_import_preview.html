@@ -29,6 +29,7 @@
                 <div class="col-md-6">
                     <h6 class="mb-3"><i class="bi bi-file-earmark-text"></i> ข้อมูลไฟล์</h6>
                     <p class="mb-1"><strong>ไฟล์:</strong> {{ filename }}</p>
+                    <p class="mb-1"><strong>หน่วยงาน:</strong> <span class="badge bg-primary">{{ department.name }}</span></p>
                     <p class="mb-1"><strong>ประเภทบัตร:</strong> <span class="badge" style="background-color: {{ badge_type.color_code }};">{{ badge_type.name }}</span></p>
                     <p class="mb-0"><strong>โซน:</strong> {% if zone %}{{ zone.full_description }}{% else %}<span class="text-muted">ไม่ระบุ</span>{% endif %}</p>
                 </div>
@@ -77,14 +78,12 @@
                     <thead class="table-light sticky-top">
                         <tr class="text-center">
                             <th style="width: 60px;">ลำดับ</th>
-                            <th style="width: 140px;">ยศ</th>
-                            <th style="width: 200px;">ชื่อ-นามสกุล</th>
+                            <th style="width: 250px;">ชื่อ-นามสกุล</th>
                             <th style="width: 140px;">บัตรประชาชน</th>
                             <th style="width: 140px;">ประเภทบุคคล</th>
                             <th style="width: 180px;">หน้าที่</th>
                             <th style="width: 60px;">อายุ</th>
-                            <th style="width: 140px;">วัคซีน</th>
-                            <th style="width: 140px;">ตรวจโควิด</th>
+                            <th style="width: 140px;">ทะเบียนรถ</th>
                             <th style="width: 80px;">สถานะ</th>
                         </tr>
                     </thead>
@@ -92,23 +91,12 @@
                         {% for item in staff_data_list %}
                         <tr class="{% if item.is_duplicate %}table-warning{% endif %}">
                             <td class="text-center">{{ item.order }}</td>
-                            <td class="small text-center">{{ item.title }}</td>
-                            <td><strong>{{ item.first_name }} {{ item.last_name }}</strong></td>
+                            <td><strong>{{ item.first_line }} {{ item.last_line }}</strong></td>
                             <td class="small text-center">{{ item.national_id }}</td>
                             <td class="small">{{ item.person_type|truncatewords:5 }}</td>
                             <td class="small">{{ item.position|truncatewords:5 }}</td>
                             <td class="text-center">{{ item.age|default:"-" }}</td>
-                            <td class="text-center small">
-                                <span class="badge {% if item.vaccine_dose_1 %}bg-success{% else %}bg-secondary{% endif %}">1</span>
-                                <span class="badge {% if item.vaccine_dose_2 %}bg-success{% else %}bg-secondary{% endif %}">2</span>
-                                <span class="badge {% if item.vaccine_dose_3 %}bg-success{% else %}bg-secondary{% endif %}">3</span>
-                                <span class="badge {% if item.vaccine_dose_4 %}bg-success{% else %}bg-secondary{% endif %}">4</span>
-                            </td>
-                            <td class="text-center small">
-                                {% if item.test_rt_pcr %}<span class="badge bg-info">PCR</span>{% endif %}
-                                {% if item.test_atk %}<span class="badge bg-info">ATK</span>{% endif %}
-                                {% if not item.test_rt_pcr and not item.test_atk and not item.test_temperature %}<span class="text-muted">-</span>{% endif %}
-                            </td>
+                            <td class="small text-center">{{ item.vehicle_registration|default:"-" }}</td>
                             <td class="text-center">
                                 {% if item.is_duplicate %}
                                     <i class="bi bi-exclamation-triangle-fill text-warning fs-5" title="ข้อมูลซ้ำ: {{ item.duplicate_info }}"></i>
@@ -186,9 +174,9 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle"></i> ยกเลิก
                 </button>
-                <form method="post" action="{% url 'registry:staff_import_confirm' %}" class="d-inline">
+                <form method="post" action="{% url 'registry:staff_import_confirm' %}" class="d-inline" id="confirmImportForm">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" class="btn btn-success" id="confirmImportBtn">
                         <i class="bi bi-check-circle"></i> ยืนยันนำเข้าข้อมูล
                     </button>
                 </form>
@@ -204,4 +192,20 @@
     z-index: 10;
 }
 </style>
+
+<script>
+// ป้องกันการกดปุ่มซ้ำ (double-submit)
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('confirmImportForm');
+    const btn = document.getElementById('confirmImportBtn');
+
+    if (form && btn) {
+        form.addEventListener('submit', function() {
+            // Disable button และแสดงสถานะ processing
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังนำเข้าข้อมูล...';
+        });
+    }
+});
+</script>
 {% endblock %}

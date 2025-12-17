@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard สรุป{% endblock %}
+
+{% block extra_css %}
+<style>
+.stat-card-large {
+    border-radius: 8px;
+    border: 1px solid #E5E7EB;
+    padding: 20px;
+    height: 100%;
+    transition: transform 0.2s;
+}
+
+.stat-card-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-value-large {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 10px 0;
+}
+
+.stat-icon-large {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.progress-item {
+    margin-bottom: 1.5rem;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.dept-bar {
+    background-color: #F3F4F6;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.dept-bar-fill {
+    background: linear-gradient(90deg, #A78BFA 0%, #C4B5FD 100%);
+    height: 30px;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    color: white;
+    font-weight: 600;
+}
+
+.status-summary-card {
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    border: 2px solid #E5E7EB;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="bi bi-bar-chart-fill"></i> Dashboard สรุปภาพรวม</h2>
+            <p class="text-muted">ภาพรวมสถานะการดำเนินงานระบบออกบัตรพิธีพระราชทานปริญญาบัตร</p>
+        </div>
+    </div>
+
+    <!-- Section 1: สถิติหลักภาพรวม (4 cards) -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card-large" style="border-left: 4px solid #A78BFA;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon-large" style="color: #A78BFA;">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="stat-value-large" style="color: #6D28D9;">{{ total_staff }}</div>
+                        <div class="text-muted">บุคลากรทั้งหมด</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card-large" style="border-left: 4px solid #10B981;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon-large" style="color: #10B981;">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div class="stat-value-large" style="color: #059669;">{{ total_departments }}</div>
+                        <div class="text-muted">หน่วยงานที่ใช้งาน</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card-large" style="border-left: 4px solid #3B82F6;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon-large" style="color: #3B82F6;">
+                            <i class="bi bi-award-fill"></i>
+                        </div>
+                        <div class="stat-value-large" style="color: #2563EB;">{{ total_badges }}</div>
+                        <div class="text-muted">บัตรทั้งหมด</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card-large" style="border-left: 4px solid #F59E0B;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon-large" style="color: #F59E0B;">
+                            <i class="bi bi-printer-fill"></i>
+                        </div>
+                        <div class="stat-value-large" style="color: #D97706;">{{ printed_badges }}</div>
+                        <div class="text-muted">พิมพ์แล้ว</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: ความคืบหน้าแต่ละขั้นตอน -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header badge-header-pink">
+                    <strong><i class="bi bi-list-check"></i> ความคืบหน้าการดำเนินงาน</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <!-- ส่งคำขอแล้ว -->
+                            <div class="progress-item">
+                                <div class="progress-label">
+                                    <div>
+                                        <i class="bi bi-send-check text-primary me-2"></i>
+                                        <strong>ส่งคำขอแล้ว</strong>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-primary" style="font-size: 1rem; padding: 6px 12px;">
+                                            {{ submitted_count }} / {{ total_staff }} คน
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ submitted_percent }}%;">
+                                        {{ submitted_percent }}%
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- อนุมัติแล้ว -->
+                            <div class="progress-item">
+                                <div class="progress-label">
+                                    <div>
+                                        <i class="bi bi-check-circle text-success me-2"></i>
+                                        <strong>อนุมัติแล้ว</strong>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-success" style="font-size: 1rem; padding: 6px 12px;">
+                                            {{ approved_count }} / {{ total_staff }} คน
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ approved_percent }}%;">
+                                        {{ approved_percent }}%
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ออกเลขบัตรแล้ว -->
+                            <div class="progress-item">
+                                <div class="progress-label">
+                                    <div>
+                                        <i class="bi bi-credit-card text-info me-2"></i>
+                                        <strong>ออกเลขบัตรแล้ว</strong>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-info text-dark" style="font-size: 1rem; padding: 6px 12px;">
+                                            {{ badge_created_count }} / {{ total_staff }} คน
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-info" role="progressbar" style="width: {{ badge_created_percent }}%;">
+                                        {{ badge_created_percent }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- พิมพ์แล้ว -->
+                            <div class="progress-item">
+                                <div class="progress-label">
+                                    <div>
+                                        <i class="bi bi-printer text-warning me-2"></i>
+                                        <strong>พิมพ์แล้ว</strong>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-warning text-dark" style="font-size: 1rem; padding: 6px 12px;">
+                                            {{ printed_badges }} / {{ total_staff }} คน
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-warning" role="progressbar" style="width: {{ printed_percent }}%;">
+                                        {{ printed_percent }}%
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- เสร็จสมบูรณ์ -->
+                            <div class="progress-item">
+                                <div class="progress-label">
+                                    <div>
+                                        <i class="bi bi-check-all text-success me-2"></i>
+                                        <strong>เสร็จสมบูรณ์</strong>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-success" style="font-size: 1rem; padding: 6px 12px;">
+                                            {{ completed_count }} / {{ total_staff }} คน
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ completed_percent }}%;">
+                                        {{ completed_percent }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3 & 4: สถิติบัตรและ Top 5 หน่วยงาน -->
+    <div class="row g-4 mb-4">
+        <!-- สถิติบัตรตามประเภท -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header badge-header-yellow">
+                    <strong><i class="bi bi-pie-chart-fill"></i> สถิติบัตรตามประเภท</strong>
+                </div>
+                <div class="card-body">
+                    {% if badge_stats %}
+                        {% for stat in badge_stats %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div>
+                                <span class="badge" style="font-size: 1rem; padding: 6px 12px; background-color: {{ stat.badge_type__color_code }}; color: white;">
+                                    {{ stat.badge_type__name }}
+                                </span>
+                            </div>
+                            <div>
+                                <strong style="font-size: 1.5rem; color: #1F2937;">{{ stat.total }}</strong>
+                                <span class="text-muted">บัตร</span>
+                                <span class="badge bg-light text-dark ms-2">{{ stat.percent }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-2">ยังไม่มีข้อมูลบัตร</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 5 หน่วยงาน -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header badge-header-green">
+                    <strong><i class="bi bi-graph-up-arrow"></i> Top 5 หน่วยงาน</strong>
+                </div>
+                <div class="card-body">
+                    {% if top_departments %}
+                        {% for dept in top_departments %}
+                        <div class="dept-bar">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong style="font-size: 0.95rem;">{{ dept.name }}</strong>
+                                <span class="badge bg-dark">{{ dept.staff_count }} คน ({{ dept.percent }}%)</span>
+                            </div>
+                            <div style="background-color: #E5E7EB; border-radius: 4px; overflow: hidden;">
+                                <div class="dept-bar-fill" style="width: {{ dept.percent }}%;">
+                                    {% if dept.percent > 15 %}{{ dept.percent }}%{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-2">ยังไม่มีข้อมูลหน่วยงาน</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 5: สรุปสถานะงาน -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header badge-header-red">
+                    <strong><i class="bi bi-clipboard-data"></i> สรุปสถานะงาน</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="status-summary-card" style="border-color: #F59E0B; background-color: #FFF7ED;">
+                                <i class="bi bi-hourglass-split" style="font-size: 2.5rem; color: #F59E0B;"></i>
+                                <h3 class="mt-3 mb-2" style="color: #D97706;">{{ pending_status }}</h3>
+                                <p class="text-muted mb-0">ยังไม่ส่งคำขอ</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="status-summary-card" style="border-color: #3B82F6; background-color: #EFF6FF;">
+                                <i class="bi bi-arrow-repeat" style="font-size: 2.5rem; color: #3B82F6;"></i>
+                                <h3 class="mt-3 mb-2" style="color: #2563EB;">{{ in_progress_status }}</h3>
+                                <p class="text-muted mb-0">อยู่ระหว่างดำเนินการ</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="status-summary-card" style="border-color: #10B981; background-color: #ECFDF5;">
+                                <i class="bi bi-check-circle-fill" style="font-size: 2.5rem; color: #10B981;"></i>
+                                <h3 class="mt-3 mb-2" style="color: #059669;">{{ completed_status }}</h3>
+                                <p class="text-muted mb-0">เสร็จสมบูรณ์</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- No JavaScript needed for this simplified dashboard -->
+{% endblock %}

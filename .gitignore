@@ -33,6 +33,7 @@ Thumbs.db
 
 # Environment variables
 .env
+.env.*
 .env.local
 
 # Git credentials (local only)
@@ -56,3 +57,17 @@ Thumbs.db
 # Images (keep uploaded images but ignore temp)
 *.jpg.tmp
 *.png.tmp
+
+# Screenshots and test images
+Capture*.JPG
+Capture*.jpg
+
+# Excel files (data files)
+*.xlsx
+*.xls
+
+# Backups
+backups/
+
+# Test files
+test_*.html

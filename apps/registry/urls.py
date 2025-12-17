@@ -20,6 +20,7 @@ urlpatterns = [
 
     # Bulk Actions
     path('bulk/submit/', views.bulk_submit, name='bulk_submit'),
+    path('bulk/delete/', views.bulk_delete, name='bulk_delete'),
 
     # Badge Type Management
     path('settings/badge-types/', views.badge_type_list, name='badge_type_list'),
@@ -37,6 +38,7 @@ urlpatterns = [
 
     # Excel Import
     path('import/upload/', views.staff_import_upload, name='staff_import_upload'),
+    path('import/get-sheets/', views.get_excel_sheets, name='get_excel_sheets'),  # AJAX endpoint
     path('import/preview/', views.staff_import_preview, name='staff_import_preview'),
     path('import/confirm/', views.staff_import_confirm, name='staff_import_confirm'),
     path('import/success/', views.staff_import_success, name='staff_import_success'),

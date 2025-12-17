@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>รายงานความพร้อมการพิมพ์บัตร - {{ department.name }}</title>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>รายงานความพร้อมการพิมพ์บัตร</h1>
+        <p><strong>หน่วยงาน:</strong> {{ department.name }}</p>
+        <p><strong>วันที่:</strong> {{ generated_date|date:"d/m/Y H:i" }} น.</p>
+    </div>
+
+    <!-- Summary Box -->
+    <div class="summary">
+        <div style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 10px;">สรุปภาพรวม</div>
+        <div class="summary-row">
+            <span>✅ พร้อมพิมพ์:</span>
+            <span><strong>{{ count_a }} คน ({{ percent_a }}%)</strong></span>
+        </div>
+        <div class="summary-row">
+            <span>✓ พิมพ์แล้ว:</span>
+            <span><strong>{{ count_b }} คน ({{ percent_b }}%)</strong></span>
+        </div>
+        <div class="summary-row">
+            <span>⚠️ รออนุมัติ/ออกเลข:</span>
+            <span><strong>{{ count_c }} คน ({{ percent_c }}%)</strong></span>
+        </div>
+        <div class="summary-row">
+            <span>❌ ยังไม่พร้อม:</span>
+            <span><strong>{{ count_d }} คน ({{ percent_d }}%)</strong></span>
+        </div>
+        <hr style="margin: 5px 0;">
+        <div class="summary-row">
+            <span><strong>รวมทั้งหมด:</strong></span>
+            <span><strong>{{ total_staff }} คน (100%)</strong></span>
+        </div>
+    </div>
+
+    <!-- กลุ่ม A: พร้อมพิมพ์ -->
+    {% if group_a %}
+    <h2 class="group-a">✅ กลุ่ม A: พร้อมพิมพ์ ({{ count_a }} คน)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;">ลำดับ</th>
+                <th style="width: 12%;">เลขบัตร</th>
+                <th style="width: 30%;">ชื่อ-นามสกุล</th>
+                <th style="width: 18%;">ประเภทบัตร</th>
+                <th style="width: 8%;">โซน</th>
+                <th style="width: 7%;" class="text-center">✓พิมพ์</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in group_a %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{{ item.badge_number }}</td>
+                <td>{{ item.full_name }}</td>
+                <td>{{ item.badge_type_name }}</td>
+                <td class="text-center">{{ item.zone_code }}</td>
+                <td class="text-center"><span class="checkbox"></span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- กลุ่ม B: พิมพ์แล้ว -->
+    {% if group_b %}
+    <h2 class="group-b">✓ กลุ่ม B: พิมพ์แล้ว ({{ count_b }} คน)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;">ลำดับ</th>
+                <th style="width: 12%;">เลขบัตร</th>
+                <th style="width: 32%;">ชื่อ-นามสกุล</th>
+                <th style="width: 18%;">ประเภทบัตร</th>
+                <th style="width: 8%;">โซน</th>
+                <th style="width: 12%;">พิมพ์เมื่อ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in group_b %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{{ item.badge_number }}</td>
+                <td>{{ item.full_name }}</td>
+                <td>{{ item.badge_type_name }}</td>
+                <td class="text-center">{{ item.zone_code }}</td>
+                <td class="text-center">{{ item.printed_date }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- กลุ่ม C: รออนุมัติ/ออกเลข -->
+    {% if group_c %}
+    <h2 class="group-c">⚠️ กลุ่ม C: รออนุมัติ/ออกเลข ({{ count_c }} คน)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;">ลำดับ</th>
+                <th style="width: 32%;">ชื่อ-นามสกุล</th>
+                <th style="width: 18%;">ประเภทบัตร</th>
+                <th style="width: 8%;">โซน</th>
+                <th style="width: 15%;">สถานะ</th>
+                <th style="width: 22%;">หมายเหตุ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in group_c %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{{ item.full_name }}</td>
+                <td>{{ item.badge_type_name }}</td>
+                <td class="text-center">{{ item.zone_code }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.notes|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- กลุ่ม D: ยังไม่พร้อม -->
+    {% if group_d %}
+    <h2 class="group-d">❌ กลุ่ม D: ยังไม่พร้อม ({{ count_d }} คน)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;">ลำดับ</th>
+                <th style="width: 28%;">ชื่อ-นามสกุล</th>
+                <th style="width: 16%;">ประเภทบัตร</th>
+                <th style="width: 7%;">โซน</th>
+                <th style="width: 13%;">สถานะ</th>
+                <th style="width: 31%;">ปัญหา/หมายเหตุ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in group_d %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{{ item.full_name }}</td>
+                <td>{{ item.badge_type_name }}</td>
+                <td class="text-center">{{ item.zone_code }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.notes }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Footer -->
+    <div style="margin-top: 1cm; text-align: center; font-size: 12pt; color: #666;">
+        <p>รายงานนี้สร้างโดยระบบอัตโนมัติ | ข้อมูล ณ วันที่ {{ generated_date|date:"d/m/Y H:i" }} น.</p>
+    </div>
+</body>
+</html>

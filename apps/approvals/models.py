@@ -12,6 +12,12 @@ class ApprovalLog(models.Model):
         ('reject', 'ส่งกลับ'),
         ('edit', 'แก้ไข'),
         ('comment', 'แสดงความคิดเห็น'),
+        ('edit_badge', 'แก้ไขบัตร'),
+        ('change_color', 'เปลี่ยนสีบัตร'),
+        ('reprint', 'พิมพ์ซ้ำ'),
+        ('badge_created', 'สร้างบัตร'),
+        ('printed', 'พิมพ์บัตร'),
+        ('badge_deleted', 'ลบบัตร'),
     ]
 
     badge_request = models.ForeignKey(

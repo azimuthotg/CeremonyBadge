@@ -99,7 +99,7 @@
                     <h6 class="sidebar-heading">
                         <i class="bi bi-file-earmark-text"></i> รายงาน
                     </h6>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'reports/my-department' in request.path %}active{% endif %}" href="{% url 'reports:submitter_report' %}">
                         <i class="bi bi-clipboard-data"></i> รายงานหน่วยงาน
                     </a>
                 </div>
@@ -121,7 +121,7 @@
 
                 <div class="sidebar-section">
                     <h6 class="sidebar-heading">
-                        <i class="bi bi-card-checklist"></i> ตรวจสอบและอนุมัติ
+                        <i class="bi bi-award"></i> จัดการบัตร
                     </h6>
                     <a class="nav-link {% if 'approvals/pending' in request.path %}active{% endif %}" href="{% url 'approvals:pending_list' %}">
                         <i class="bi bi-hourglass-split"></i> รอตรวจสอบ
@@ -130,40 +130,35 @@
                         {% endif %}
                     </a>
                     <a class="nav-link {% if 'approvals/approved' in request.path %}active{% endif %}" href="{% url 'approvals:approved_list' %}">
-                        <i class="bi bi-check-circle"></i> อนุมัติแล้ว
+                        <i class="bi bi-check-circle"></i> ออกเลขบัตร
                     </a>
-                    <a class="nav-link {% if 'approvals/rejected' in request.path %}active{% endif %}" href="{% url 'approvals:rejected_list' %}">
-                        <i class="bi bi-x-circle"></i> ส่งกลับแก้ไข
+                    <a class="nav-link {% if 'badges/list' in request.path %}active{% endif %}" href="{% url 'badges:badge_list' %}">
+                        <i class="bi bi-printer"></i> บัตรพร้อมพิมพ์
                     </a>
-                    <a class="nav-link {% if 'approvals/history' in request.path %}active{% endif %}" href="{% url 'approvals:history' %}">
-                        <i class="bi bi-clock-history"></i> ประวัติการอนุมัติ
+                    <a class="nav-link {% if 'badges/print' in request.path %}active{% endif %}" href="{% url 'badges:print_manager' %}">
+                        <i class="bi bi-printer-fill"></i> พิมพ์บัตร (A4)
                     </a>
                 </div>
 
-                <div class="sidebar-section">
-                    <h6 class="sidebar-heading">
-                        <i class="bi bi-award"></i> จัดการบัตร
-                    </h6>
-                    <a class="nav-link {% if 'badges/list' in request.path %}active{% endif %}" href="{% url 'badges:badge_list' %}">
-                        <i class="bi bi-card-list"></i> รายการบัตร
-                    </a>
-                    <a class="nav-link {% if 'approvals/approved' in request.path %}active{% endif %}" href="{% url 'approvals:approved_list' %}">
-                        <i class="bi bi-file-plus"></i> สร้างบัตรจากรายการอนุมัติ
-                    </a>
-                </div>
 
                 <div class="sidebar-section">
                     <h6 class="sidebar-heading">
                         <i class="bi bi-file-earmark-bar-graph"></i> รายงาน
                     </h6>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'reports/dashboard' in request.path %}active{% endif %}" href="{% url 'reports:dashboard_summary' %}">
                         <i class="bi bi-bar-chart"></i> Dashboard สรุป
                     </a>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'reports/print-manager' in request.path %}active{% endif %}" href="{% url 'reports:print_manager' %}">
+                        <i class="bi bi-printer-fill"></i> Print Manager
+                    </a>
+                    <a class="nav-link {% if 'reports/department' in request.path and 'print-manager' not in request.path %}active{% endif %}" href="{% url 'reports:report_by_department' %}">
                         <i class="bi bi-building"></i> รายงานตามหน่วยงาน
                     </a>
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {% if 'reports/badge-type' in request.path %}active{% endif %}" href="{% url 'reports:report_by_badge_type' %}">
                         <i class="bi bi-award"></i> รายงานตามประเภทบัตร
+                    </a>
+                    <a class="nav-link {% if 'reports/duplicates' in request.path %}active{% endif %}" href="{% url 'reports:duplicate_check' %}">
+                        <i class="bi bi-search"></i> ตรวจสอบข้อมูล
                     </a>
                     <a class="nav-link" href="#">
                         <i class="bi bi-download"></i> Export ข้อมูล

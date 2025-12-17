@@ -60,20 +60,18 @@
 
                     <!-- Personal Info -->
                     <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">ยศ:</small></div>
-                        <div class="col-md-4">{{ staff_profile.title|default:"-" }}</div>
-                        <div class="col-md-2"><small class="text-muted">ชื่อ:</small></div>
-                        <div class="col-md-4">{{ staff_profile.first_name }}</div>
+                        <div class="col-md-2"><small class="text-muted">ยศชื่อ:</small></div>
+                        <div class="col-md-4">{{ staff_profile.first_line }}</div>
+                        <div class="col-md-2"><small class="text-muted">นามสกุล:</small></div>
+                        <div class="col-md-4">{{ staff_profile.last_line }}</div>
                     </div>
                     <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">นามสกุล:</small></div>
-                        <div class="col-md-4">{{ staff_profile.last_name }}</div>
                         <div class="col-md-2"><small class="text-muted">บัตรประชาชน:</small></div>
                         <div class="col-md-4">{{ staff_profile.national_id|default:"-" }}</div>
-                    </div>
-                    <div class="row mb-3">
                         <div class="col-md-2"><small class="text-muted">อายุ:</small></div>
                         <div class="col-md-4">{{ staff_profile.age|default:"-" }} ปี</div>
+                    </div>
+                    <div class="row mb-3">
                         <div class="col-md-2"><small class="text-muted">ทะเบียนรถ:</small></div>
                         <div class="col-md-4">{{ staff_profile.vehicle_registration|default:"-" }}</div>
                     </div>
@@ -120,16 +118,6 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">วันที่ปฏิบัติงาน:</small></div>
-                        <div class="col-md-10">
-                            {% if work_dates_display %}
-                                <span class="text-primary fw-bold">{{ work_dates_display }}</span>
-                            {% else %}
-                                <span class="text-muted">ยังไม่ได้กำหนดวันที่ปฏิบัติงาน</span>
-                            {% endif %}
-                        </div>
-                    </div>
                     <hr>
 
                     <!-- Contact Info -->
@@ -139,29 +127,6 @@
                         <div class="col-md-2"><small class="text-muted">อีเมล:</small></div>
                         <div class="col-md-4">{{ staff_profile.email|default:"-" }}</div>
                     </div>
-                    <hr>
-
-                    <!-- Vaccine & Test -->
-                    <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">การรับวัคซีน:</small></div>
-                        <div class="col-md-10">
-                            {% if staff_profile.vaccine_dose_1 %}<span class="badge bg-success me-1">เข็ม 1</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_2 %}<span class="badge bg-success me-1">เข็ม 2</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_3 %}<span class="badge bg-success me-1">เข็ม 3</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_4 %}<span class="badge bg-success me-1">เข็ม 4</span>{% endif %}
-                            {% if not staff_profile.vaccine_dose_1 and not staff_profile.vaccine_dose_2 and not staff_profile.vaccine_dose_3 and not staff_profile.vaccine_dose_4 %}<span class="text-muted">-</span>{% endif %}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-2"><small class="text-muted">การตรวจโควิดก่อนการปฏิบัติงาน:</small></div>
-                        <div class="col-md-10">
-                            {% if staff_profile.test_rt_pcr %}<span class="badge bg-info me-1">RT-PCR</span>{% endif %}
-                            {% if staff_profile.test_atk %}<span class="badge bg-info me-1">ATK</span>{% endif %}
-                            {% if staff_profile.test_temperature %}<span class="badge bg-info me-1">วัดอุณหภูมิ</span>{% endif %}
-                            {% if not staff_profile.test_rt_pcr and not staff_profile.test_atk and not staff_profile.test_temperature %}<span class="text-muted">-</span>{% endif %}
-                        </div>
-                    </div>
-
                     <!-- Notes -->
                     {% if staff_profile.notes %}
                     <hr>

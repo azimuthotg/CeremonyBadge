@@ -4,12 +4,36 @@
 
 {% block content %}
 <div class="container-fluid px-4 py-4">
+    {% csrf_token %}
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <h2><i class="bi bi-check-circle-fill text-success"></i> รายการที่อนุมัติแล้ว</h2>
-            <p class="text-muted">คำขอที่ได้รับการอนุมัติ พร้อมสำหรับสร้างบัตร</p>
+            <h2><i class="bi bi-check-circle-fill text-success"></i> ออกเลขบัตร</h2>
+            <p class="text-muted">คำขอที่ได้รับการอนุมัติ พร้อมสำหรับออกเลขบัตร</p>
         </div>
+    </div>
+
+    <!-- Badge Number Info Cards -->
+    <div class="row mb-3">
+        {% for data in badge_data %}
+        <div class="col-md-3 mb-2">
+            <div class="card border-start border-4" style="border-color: {{ data.badge_type.color_code }} !important;">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0" style="font-size: 0.9rem;">{{ data.badge_type.name }}</h6>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                <span class="me-2">ล่าสุด: <strong>{{ data.latest_badge_number }}</strong></span>
+                            </div>
+                            <div class="text-success" style="font-size: 0.8rem;">
+                                ถัดไป: <strong>{{ data.next_badge_number }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
     <!-- Badge Type Tabs -->
@@ -24,9 +48,9 @@
                             data-bs-target="#badge-{{ data.badge_type.id }}"
                             type="button"
                             role="tab"
-                            style="background-color: {{ data.badge_type.color_code }}; border-color: {{ data.badge_type.color_code }}; color: black; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
+                            style="background-color: {{ data.badge_type.color_code }} !important; border-color: {{ data.badge_type.color_code }} !important; color: black !important; {% if data.badge_type.id|stringformat:'s' != active_badge_id %}opacity: 0.6;{% endif %}">
                         {{ data.badge_type.name }}
-                        <span class="badge bg-light text-dark ms-1">{{ data.badge_created_count }}/{{ data.total_count }}</span>
+                        <span class="badge bg-light text-dark ms-1">📝 ออกเลขแล้ว {{ data.badge_created_count }}/{{ data.total_count }} บัตร</span>
                     </button>
                 </li>
                 {% endfor %}
@@ -34,20 +58,55 @@
         </div>
     </div>
 
-    <!-- Search -->
+    <!-- Filters -->
     <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <form method="get" class="input-group">
-                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ, นามสกุล, ตำแหน่ง..." value="{{ search }}">
-                <button class="btn btn-outline-primary" type="submit">
-                    <i class="bi bi-search"></i> ค้นหา
-                </button>
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" name="search" class="form-control" placeholder="ค้นหา: ชื่อ-นามสกุล, ตำแหน่ง..." value="{{ search }}">
+                <input type="hidden" name="department" value="{{ department_filter }}">
+                <button class="btn btn-outline-primary" type="submit">ค้นหา</button>
                 {% if search %}
-                <a href="{% url 'approvals:approved_list' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x"></i> ล้าง
+                <a href="?department={{ department_filter }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i>
                 </a>
                 {% endif %}
             </form>
+        </div>
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-building"></i></span>
+                <select class="form-select" name="department" onchange="filterByDepartment(this.value)">
+                    <option value="">ทุกหน่วยงาน</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if department_filter == dept.id|stringformat:'s' %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar (hidden by default) -->
+    <div id="bulkActionsBar" class="row mb-3" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-primary d-flex justify-content-between align-items-center">
+                <div>
+                    <strong><span id="selectedCount">0</span> รายการที่เลือก</strong>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-warning me-2" id="bulkEditBtn">
+                        <i class="bi bi-pencil-square"></i> แก้ไขรายการที่เลือก
+                    </button>
+                    <button type="button" class="btn btn-success me-2" id="bulkCreateBadgeBtn">
+                        <i class="bi bi-credit-card"></i> สร้างบัตรที่เลือก
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="clearSelectionBtn">
+                        <i class="bi bi-x"></i> ยกเลิก
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -65,11 +124,12 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th width="12%">ยศ</th>
+                                    <th width="30"><input type="checkbox" class="form-check-input select-all-approved" data-badge-type="{{ data.badge_type.id }}"></th>
                                     <th width="18%">ชื่อ-นามสกุล</th>
                                     <th width="12%">บัตรประชาชน</th>
-                                    <th width="18%">ตำแหน่ง</th>
-                                    <th width="12%">ประเภทบัตร</th>
+                                    <th width="15%">ตำแหน่ง</th>
+                                    <th width="10%">ประเภทบัตร</th>
+                                    <th width="12%">โซน</th>
                                     <th width="10%">สถานะ</th>
                                     <th width="10%" class="text-center">จัดการ</th>
                                 </tr>
@@ -77,9 +137,12 @@
                             <tbody>
                                 {% for req in data.requests %}
                                 <tr>
-                                    <td>{{ req.staff_profile.title }}</td>
                                     <td>
-                                        <strong>{{ req.staff_profile.first_name }} {{ req.staff_profile.last_name }}</strong>
+                                        <input type="checkbox" class="form-check-input approved-checkbox" value="{{ req.id }}" data-badge-type="{{ data.badge_type.id }}">
+                                    </td>
+                                    <td>
+                                        <strong>{{ req.staff_profile.first_line }} {{ req.staff_profile.last_line }}</strong>
+                                        <small class="text-muted d-block">{{ req.staff_profile.department.name }}</small>
                                     </td>
                                     <td class="small">{{ req.staff_profile.national_id|default:"-" }}</td>
                                     <td>{{ req.staff_profile.position }}</td>
@@ -89,16 +152,24 @@
                                         </span>
                                     </td>
                                     <td>
+                                        {% if req.staff_profile.zone %}
+                                            <span class="badge bg-secondary">{{ req.staff_profile.zone.code }}</span>
+                                            <small class="text-muted d-block">{{ req.staff_profile.zone.name }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         <span class="badge-status {{ req.status }}">
                                             {{ req.get_status_display }}
                                         </span>
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-sm btn-outline-primary" title="ดูรายละเอียด">
+                                            <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-outline-primary" title="ดูรายละเอียด">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{% url 'badges:create_badge' req.id %}" class="btn btn-sm btn-success" title="สร้างบัตร">
+                                            <a href="{% url 'badges:create_badge' req.id %}" class="btn btn-success" title="สร้างบัตร">
                                                 <i class="bi bi-credit-card"></i>
                                             </a>
                                         </div>
@@ -126,4 +197,331 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- Bulk Edit Modal -->
+<div class="modal fade" id="bulkEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-pencil-square"></i> แก้ไขรายการที่เลือก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-edit-form" action="{% url 'approvals:bulk_edit_approved' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังแก้ไข <strong><span id="bulk-edit-count">0</span></strong> รายการ
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">ตำแหน่ง</label>
+                        <input type="text" class="form-control" name="position" id="bulk-edit-position" placeholder="ระบุตำแหน่งใหม่ (ไม่กรอก = ไม่เปลี่ยน)">
+                        <small class="form-text text-muted">หากไม่ต้องการเปลี่ยนตำแหน่ง ให้เว้นว่างไว้</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">พื้นที่/โซน</label>
+                        <select class="form-select" name="zone_id" id="bulk-edit-zone">
+                            <option value="">-- ไม่เปลี่ยนแปลง --</option>
+                            {% for zone in zones %}
+                            <option value="{{ zone.id }}">{{ zone.code }} - {{ zone.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">หากไม่ต้องการเปลี่ยนโซน ให้เลือก "ไม่เปลี่ยนแปลง"</small>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>หมายเหตุ:</strong> ระบบจะอัพเดตเฉพาะฟิลด์ที่มีการเปลี่ยนแปลง
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-pencil-square"></i> ยืนยันการแก้ไข
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Create Badge Modal -->
+<div class="modal fade" id="bulkCreateBadgeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-credit-card"></i> สร้างบัตรที่เลือก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-create-badge-form" action="{% url 'badges:bulk_create_badge' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-primary">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังสร้างบัตรสำหรับ <strong><span id="bulk-create-badge-count">0</span></strong> รายการ
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>หมายเหตุ:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>ระบบจะสร้างบัตรและกำหนดหมายเลขบัตรให้โดยอัตโนมัติ</li>
+                            <li>รายการที่มีบัตรอยู่แล้วจะถูกข้าม</li>
+                            <li>รายการที่ไม่มีรูปภาพ (สำหรับบัตรที่ต้องการรูป) จะถูกข้าม</li>
+                        </ul>
+                    </div>
+                    <p>คุณต้องการดำเนินการต่อหรือไม่?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-credit-card"></i> ยืนยันสร้างบัตร
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Department filter function
+function filterByDepartment(departmentId) {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (departmentId) {
+        urlParams.set('department', departmentId);
+    } else {
+        urlParams.delete('department');
+    }
+
+    // Keep search parameter if exists
+    const search = '{{ search }}';
+    if (search) {
+        urlParams.set('search', search);
+    }
+
+    window.location.href = '?' + urlParams.toString();
+}
+
+(function() {
+    'use strict';
+
+    // Wait for DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    function init() {
+        console.log('Initializing approved list tab memory and bulk actions...');
+        initTabMemory();
+        restoreActiveTab();
+        initBulkActions();
+    }
+
+    // Tab Memory with localStorage
+    function initTabMemory() {
+        // Listen to all tab button clicks (note: this page uses "pill" not "tab")
+        document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function(event) {
+                // Extract badge type ID from tab target
+                const target = event.target.getAttribute('data-bs-target');
+                const badgeTypeId = target.replace('#badge-', '');
+
+                // Save to localStorage
+                localStorage.setItem('approved_list_active_tab', badgeTypeId);
+                console.log('Saved active tab (approved list):', badgeTypeId);
+            });
+        });
+    }
+
+    function restoreActiveTab() {
+        // Get saved tab from localStorage
+        const savedTab = localStorage.getItem('approved_list_active_tab');
+
+        if (savedTab) {
+            // Find and activate the saved tab
+            const tabButton = document.getElementById('badge-' + savedTab + '-tab');
+            if (tabButton) {
+                const tab = new bootstrap.Tab(tabButton);
+                tab.show();
+                console.log('Restored active tab (approved list):', savedTab);
+            }
+        }
+    }
+
+    // Bulk Actions
+    function initBulkActions() {
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const bulkCreateBadgeBtn = document.getElementById('bulkCreateBadgeBtn');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+        // Select all checkboxes
+        document.querySelectorAll('.select-all-approved').forEach(function(selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const badgeType = this.getAttribute('data-badge-type');
+                const checkboxes = document.querySelectorAll('.approved-checkbox[data-badge-type="' + badgeType + '"]');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+                updateBulkActionsBar();
+            });
+        });
+
+        // Individual checkboxes
+        document.querySelectorAll('.approved-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                updateBulkActionsBar();
+
+                // Update select-all checkbox for this badge type
+                const badgeType = this.getAttribute('data-badge-type');
+                const allCheckboxes = document.querySelectorAll('.approved-checkbox[data-badge-type="' + badgeType + '"]');
+                const checkedCheckboxes = document.querySelectorAll('.approved-checkbox[data-badge-type="' + badgeType + '"]:checked');
+                const selectAllCheckbox = document.querySelector('.select-all-approved[data-badge-type="' + badgeType + '"]');
+
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length && allCheckboxes.length > 0;
+                }
+            });
+        });
+
+        // Clear selection button
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', function() {
+                document.querySelectorAll('.approved-checkbox:checked').forEach(function(checkbox) {
+                    checkbox.checked = false;
+                });
+                document.querySelectorAll('.select-all-approved:checked').forEach(function(checkbox) {
+                    checkbox.checked = false;
+                });
+                updateBulkActionsBar();
+            });
+        }
+
+        // Bulk edit button
+        const bulkEditBtn = document.getElementById('bulkEditBtn');
+        if (bulkEditBtn) {
+            bulkEditBtn.addEventListener('click', function() {
+                const selectedIds = getSelectedIds();
+                if (selectedIds.length === 0) {
+                    alert('กรุณาเลือกรายการที่ต้องการแก้ไข');
+                    return;
+                }
+
+                // Update count in modal
+                const countSpan = document.getElementById('bulk-edit-count');
+                if (countSpan) {
+                    countSpan.textContent = selectedIds.length;
+                }
+
+                // Clear previous values
+                document.getElementById('bulk-edit-position').value = '';
+                document.getElementById('bulk-edit-zone').value = '';
+
+                // Add hidden inputs to form
+                const form = document.getElementById('bulk-edit-form');
+                if (form) {
+                    // Clear previous hidden inputs
+                    const oldInputs = form.querySelectorAll('input[name="request_ids"]');
+                    oldInputs.forEach(function(input) {
+                        input.remove();
+                    });
+
+                    // Add new hidden inputs
+                    selectedIds.forEach(function(id) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'request_ids';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                }
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('bulkEditModal'));
+                modal.show();
+            });
+        }
+
+        // Bulk create badge button
+        if (bulkCreateBadgeBtn) {
+            bulkCreateBadgeBtn.addEventListener('click', function() {
+                const selectedIds = getSelectedIds();
+                if (selectedIds.length === 0) {
+                    alert('กรุณาเลือกรายการที่ต้องการสร้างบัตร');
+                    return;
+                }
+
+                // Update count in modal
+                const countSpan = document.getElementById('bulk-create-badge-count');
+                if (countSpan) {
+                    countSpan.textContent = selectedIds.length;
+                }
+
+                // Add hidden inputs to form
+                const form = document.getElementById('bulk-create-badge-form');
+                if (form) {
+                    // Clear previous hidden inputs
+                    const oldInputs = form.querySelectorAll('input[name="request_ids"]');
+                    oldInputs.forEach(function(input) {
+                        input.remove();
+                    });
+
+                    // Add new hidden inputs
+                    selectedIds.forEach(function(id) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'request_ids';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                }
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('bulkCreateBadgeModal'));
+                modal.show();
+            });
+        }
+
+        function updateBulkActionsBar() {
+            const selectedCheckboxes = document.querySelectorAll('.approved-checkbox:checked');
+            const count = selectedCheckboxes.length;
+
+            if (selectedCountSpan) {
+                selectedCountSpan.textContent = count;
+            }
+
+            if (bulkActionsBar) {
+                bulkActionsBar.style.display = count > 0 ? 'block' : 'none';
+            }
+        }
+
+        function getSelectedIds() {
+            const selectedCheckboxes = document.querySelectorAll('.approved-checkbox:checked');
+            const ids = [];
+            selectedCheckboxes.forEach(function(checkbox) {
+                ids.push(checkbox.value);
+            });
+            return ids;
+        }
+
+        // Handle form submission - disable button to prevent double submit
+        const createBadgeForm = document.getElementById('bulk-create-badge-form');
+        if (createBadgeForm) {
+            createBadgeForm.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังสร้างบัตร...';
+                }
+            });
+        }
+    }
+})();
+</script>
 {% endblock %}

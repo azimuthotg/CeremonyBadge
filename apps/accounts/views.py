@@ -233,7 +233,7 @@ def department_list(request):
 
     departments = Department.objects.annotate(
         user_count=Count('users')
-    ).order_by('name')
+    ).order_by('-is_active', 'name')  # เรียงตามสถานะ (เปิดใช้งานก่อน) แล้วตามด้วยชื่อ
 
     # Search
     search = request.GET.get('search', '')

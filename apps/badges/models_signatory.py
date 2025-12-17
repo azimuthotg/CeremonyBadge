@@ -29,11 +29,11 @@ class BadgeSignatory(models.Model):
         ordering = ['rank', 'first_name']
 
     def __str__(self):
-        rank_str = f"{self.rank} " if self.rank else ""
+        rank_str = f"{self.rank}" if self.rank else ""
         return f"{rank_str}{self.first_name} {self.last_name}"
 
     @property
     def full_name(self):
-        """ชื่อ-นามสกุลเต็ม"""
-        rank_str = f"{self.rank} " if self.rank else ""
+        """ชื่อ-นามสกุลเต็ม (ยศติดชื่อไม่เว้นวรรค)"""
+        rank_str = f"{self.rank}" if self.rank else ""
         return f"{rank_str}{self.first_name} {self.last_name}"

@@ -16,80 +16,100 @@
         </div>
     </div>
 
+    <!-- Badge Number Info Cards -->
+    <div class="row mb-3">
+        {% for info in badge_info %}
+        <div class="col-md-3 mb-2">
+            <div class="card border-start border-4" style="border-color: {{ info.badge_type.color_code }} !important;">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0" style="font-size: 0.9rem;">{{ info.badge_type.name }}</h6>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                <span class="me-2">ล่าสุด: <strong>{{ info.latest_badge_number }}</strong></span>
+                            </div>
+                            <div class="text-success" style="font-size: 0.8rem;">
+                                ถัดไป: <strong>{{ info.next_badge_number }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
     <div class="row">
         <!-- Left Column - Photo and Actions -->
         <div class="col-md-4">
             <!-- Photo Card -->
-            <div class="card mb-4">
-                <div class="card-body text-center">
-                    {% if photo.cropped_photo %}
-                        <img src="{{ photo.cropped_photo.url }}" alt="Photo" class="img-fluid rounded mb-3" style="max-width: 100%;">
-                    {% elif photo.original_photo %}
-                        <img src="{{ photo.original_photo.url }}" alt="Photo" class="img-fluid rounded mb-3" style="max-width: 100%;">
-                    {% else %}
-                        <div class="py-5 bg-light rounded mb-3">
-                            <i class="bi bi-person-circle" style="font-size: 6rem; color: #ccc;"></i>
-                        </div>
-                    {% endif %}
-
-                    <h4>{{ staff_profile.full_name }}</h4>
-                    <p class="text-muted">{{ staff_profile.position }}</p>
-
-                    <div class="mb-3">
-                        <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }}; font-size: 1rem; padding: 8px 16px;">
-                            {{ staff_profile.badge_type.name }}
-                        </span>
-                    </div>
-
-                    <div>
-                        <span class="badge-status {{ badge_request.status }}" style="font-size: 0.9rem;">
-                            {{ badge_request.get_status_display }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Actions Card -->
-            {% if badge_request.status in 'submitted,under_review' %}
             <div class="card">
-                <div class="card-header bg-light">
-                    <strong><i class="bi bi-lightning-charge-fill"></i> การดำเนินการ</strong>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveModal">
-                            <i class="bi bi-check-circle"></i> อนุมัติ
-                        </button>
-                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
-                            <i class="bi bi-x-circle"></i> ส่งกลับแก้ไข
-                        </button>
-                        <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-primary">
-                            <i class="bi bi-pencil"></i> แก้ไขข้อมูล
+                <div class="card-body text-center">
+                    <!-- Photo with Overlay Badges -->
+                    <div class="position-relative mb-2 mx-auto" style="max-width: 320px;">
+                        {% if photo.cropped_photo %}
+                            <img src="{{ photo.cropped_photo.url }}" alt="Photo" class="img-fluid rounded" style="width: 100%;">
+                        {% elif photo.original_photo %}
+                            <img src="{{ photo.original_photo.url }}" alt="Photo" class="img-fluid rounded" style="width: 100%;">
+                        {% else %}
+                            <div class="py-5 bg-light rounded" style="width: 100%; height: 400px;">
+                                <i class="bi bi-person-circle" style="font-size: 6rem; color: #ccc;"></i>
+                            </div>
+                        {% endif %}
+
+                        <!-- Overlay Badges - Top Right Corner -->
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <div class="mb-1">
+                                <span class="badge" style="background-color: {{ staff_profile.badge_type.color_code }}; font-size: 0.75rem; padding: 4px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                    {{ staff_profile.badge_type.name }}
+                                </span>
+                            </div>
+                            <div>
+                                <span class="badge-status {{ badge_request.status }}" style="font-size: 0.7rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                    {{ badge_request.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions (Inline Buttons) - Below Photo -->
+                    {% if badge_request.status in 'submitted,under_review' %}
+                    <div class="mx-auto" style="max-width: 320px;">
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal">
+                                <i class="bi bi-check-circle"></i> อนุมัติ
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                <i class="bi bi-x-circle"></i> ตีกลับ
+                            </button>
+                            <a href="{% url 'registry:wizard_step1_edit' staff_profile.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i> แก้ไข
+                            </a>
+                        </div>
+                    </div>
+                    {% elif badge_request.status == 'approved' %}
+                    <div class="mx-auto" style="max-width: 320px;">
+                        <a href="{% url 'badges:create_badge' badge_request.id %}" class="btn w-100" style="background-color: #d1f4e0; color: #2d6a4f; border: 1px solid #95d5b2;">
+                            <i class="bi bi-credit-card"></i> อนุมัติออกเลข
                         </a>
                     </div>
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
         </div>
 
         <!-- Right Column - Details -->
         <div class="col-md-8">
             <!-- Main Information Card -->
             <div class="card mb-3">
-                <div class="card-header">
+                <div class="card-header badge-header-{{ staff_profile.badge_type.color }}">
                     <strong><i class="bi bi-person-vcard"></i> ข้อมูลบุคลากร</strong>
                 </div>
                 <div class="card-body">
                     <!-- Personal Info -->
                     <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">ยศ:</small></div>
-                        <div class="col-md-4">{{ staff_profile.title|default:"-" }}</div>
-                        <div class="col-md-2"><small class="text-muted">ชื่อ:</small></div>
-                        <div class="col-md-4">{{ staff_profile.first_name }}</div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">นามสกุล:</small></div>
-                        <div class="col-md-4">{{ staff_profile.last_name }}</div>
+                        <div class="col-md-2"><small class="text-muted">ชื่อ-นามสกุล:</small></div>
+                        <div class="col-md-4"><strong>{{ staff_profile.first_line }} {{ staff_profile.last_line }}</strong></div>
                         <div class="col-md-2"><small class="text-muted">บัตรประชาชน:</small></div>
                         <div class="col-md-4">{{ staff_profile.national_id|default:"-" }}</div>
                     </div>
@@ -145,28 +165,6 @@
                         <div class="col-md-2"><small class="text-muted">อีเมล:</small></div>
                         <div class="col-md-4">{{ staff_profile.email|default:"-" }}</div>
                     </div>
-                    <hr>
-                    <!-- Vaccine & Test -->
-                    <div class="row mb-2">
-                        <div class="col-md-2"><small class="text-muted">การรับวัคซีน:</small></div>
-                        <div class="col-md-10">
-                            {% if staff_profile.vaccine_dose_1 %}<span class="badge bg-success me-1">เข็ม 1</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_2 %}<span class="badge bg-success me-1">เข็ม 2</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_3 %}<span class="badge bg-success me-1">เข็ม 3</span>{% endif %}
-                            {% if staff_profile.vaccine_dose_4 %}<span class="badge bg-success me-1">เข็ม 4</span>{% endif %}
-                            {% if not staff_profile.vaccine_dose_1 and not staff_profile.vaccine_dose_2 and not staff_profile.vaccine_dose_3 and not staff_profile.vaccine_dose_4 %}<span class="text-muted">-</span>{% endif %}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-2"><small class="text-muted">การตรวจโควิด:</small></div>
-                        <div class="col-md-10">
-                            {% if staff_profile.test_rt_pcr %}<span class="badge bg-info me-1">RT-PCR</span>{% endif %}
-                            {% if staff_profile.test_atk %}<span class="badge bg-info me-1">ATK</span>{% endif %}
-                            {% if staff_profile.test_temperature %}<span class="badge bg-info me-1">วัดอุณหภูมิ</span>{% endif %}
-                            {% if not staff_profile.test_rt_pcr and not staff_profile.test_atk and not staff_profile.test_temperature %}<span class="text-muted">-</span>{% endif %}
-                        </div>
-                    </div>
-
                     <!-- Notes -->
                     {% if staff_profile.notes %}
                     <hr>
@@ -180,7 +178,7 @@
 
             <!-- Request Info Card -->
             <div class="card mb-3">
-                <div class="card-header">
+                <div class="card-header badge-header-{{ staff_profile.badge_type.color }}">
                     <strong><i class="bi bi-info-circle"></i> ข้อมูลคำขอ</strong>
                 </div>
                 <div class="card-body">
@@ -245,7 +243,7 @@
             <!-- Approval History Card -->
             {% if approval_logs %}
             <div class="card">
-                <div class="card-header">
+                <div class="card-header badge-header-{{ staff_profile.badge_type.color }}">
                     <strong><i class="bi bi-clock-history"></i> ประวัติการดำเนินการ</strong>
                 </div>
                 <div class="card-body">
