@@ -350,9 +350,17 @@ def badge_receipt_report_pdf(request, department_id):
     แสดงรายชื่อบุคลากรที่สร้างบัตรแล้ว พร้อมช่องเซ็นรับ
     """
     from django.http import HttpResponse
-    from weasyprint import HTML, CSS
-    from django.template.loader import render_to_string
     from django.db.models import Case, When, IntegerField
+    from django.conf import settings
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm, mm
+    from reportlab.pdfgen import canvas
+    from reportlab.platypus import Table, TableStyle, Paragraph
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
     import os
 
     # ตรวจสอบสิทธิ์
@@ -364,6 +372,17 @@ def badge_receipt_report_pdf(request, department_id):
         department = Department.objects.get(id=department_id, is_active=True)
     except Department.DoesNotExist:
         return HttpResponse('ไม่พบหน่วยงาน', status=404)
+
+    # ลงทะเบียนฟอนต์ไทย
+    font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'THSarabunNew.ttf')
+    font_bold_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'THSarabunNew Bold.ttf')
+
+    try:
+        pdfmetrics.registerFont(TTFont('THSarabun', font_path))
+        pdfmetrics.registerFont(TTFont('THSarabun-Bold', font_bold_path))
+    except:
+        # ถ้าไม่มีฟอนต์ใช้ default
+        pass
 
     # เรียงตามลำดับมาตรฐาน: สี (pink → red → yellow → green) → โซน (A → B → C...) → ชื่อ
     color_order = Case(
@@ -385,7 +404,7 @@ def badge_receipt_report_pdf(request, department_id):
         'color_sort', 'zone__code', 'first_line', 'last_line'
     ).distinct()
 
-    # นับจำนวนตามประเภทบัตร (เรียงตามมาตรฐาน: ชมพู → แดง → เหลือง → เขียว)
+    # นับจำนวนตามประเภทบัตร
     badge_types_ordered = BadgeType.objects.filter(is_active=True).annotate(
         color_sort=Case(
             When(color='pink', then=1),
@@ -401,89 +420,86 @@ def badge_receipt_report_pdf(request, department_id):
         count = staff_with_badges.filter(badge_type=badge_type).count()
         badge_type_counts[badge_type.name] = count
 
-    # สร้าง context สำหรับ template
-    context = {
-        'department': department,
-        'staff_list': staff_with_badges,
-        'total_count': staff_with_badges.count(),
-        'badge_type_counts': badge_type_counts,
-        'generated_date': timezone.now(),
-    }
-
-    # Render HTML template
-    html_string = render_to_string('reports/badge_receipt_pdf.html', context)
-
     # สร้าง PDF
-    from django.conf import settings
-    from weasyprint.text.fonts import FontConfiguration
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
 
-    # Font configuration for Thai fonts
-    font_config = FontConfiguration()
+    # หัวกระดาศ
+    y_position = height - 2*cm
 
-    # Path to Thai font
-    font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'THSarabunNew.ttf')
+    pdf.setFont('THSarabun-Bold', 20)
+    pdf.drawCentredString(width/2, y_position, 'ใบเซ็นรับบัตร')
+    y_position -= 0.7*cm
 
-    # CSS with embedded font
-    css_string = f'''
-        @font-face {{
-            font-family: 'THSarabunNew';
-            src: url('file://{font_path}') format('truetype');
-        }}
-        @page {{
-            size: A4;
-            margin: 2cm 1.5cm;
-        }}
-        * {{
-            font-family: 'THSarabunNew', 'DejaVu Sans', sans-serif;
-        }}
-        body {{
-            font-size: 16pt;
-            line-height: 1.6;
-        }}
-        .logo {{
-            width: 2cm;
-            height: auto;
-        }}
-        h1 {{
-            font-size: 20pt;
-            font-weight: bold;
-        }}
-        h2 {{
-            font-size: 18pt;
-            font-weight: bold;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0.5cm;
-            font-size: 14pt;
-        }}
-        th, td {{
-            border: 1px solid #000;
-            padding: 8px 6px;
-            text-align: left;
-        }}
-        th {{
-            background-color: #e0e0e0;
-            font-weight: bold;
-            text-align: center;
-        }}
-        .text-center {{
-            text-align: center;
-        }}
-    '''
+    pdf.setFont('THSarabun-Bold', 16)
+    pdf.drawCentredString(width/2, y_position, f'หน่วยงาน: {department.name}')
+    y_position -= 0.6*cm
 
-    html = HTML(string=html_string, base_url=request.build_absolute_uri())
-    pdf_file = html.write_pdf(
-        stylesheets=[CSS(string=css_string, font_config=font_config)],
-        font_config=font_config
-    )
+    pdf.setFont('THSarabun', 14)
+    pdf.drawCentredString(width/2, y_position, f'วันที่พิมพ์: {timezone.now().strftime("%d/%m/%Y %H:%M")}')
+    y_position -= 0.5*cm
+
+    # สรุปจำนวน
+    summary_text = f'จำนวนบัตรทั้งหมด: {staff_with_badges.count()} บัตร'
+    if badge_type_counts:
+        summary_text += ' ('
+        summary_text += ', '.join([f'{name}: {count}' for name, count in badge_type_counts.items() if count > 0])
+        summary_text += ')'
+
+    pdf.setFont('THSarabun', 14)
+    pdf.drawCentredString(width/2, y_position, summary_text)
+    y_position -= 1*cm
+
+    # ตาราง
+    data = [['ลำดับ', 'เลขบัตร', 'ชื่อ-นามสกุล', 'ประเภท', 'โซน', 'ลายเซ็น']]
+
+    for idx, staff in enumerate(staff_with_badges, 1):
+        badge_number = staff.badge.badge_number if hasattr(staff, 'badge') and staff.badge else '-'
+        full_name = f"{staff.first_line} {staff.last_line}"
+        badge_type = staff.badge_type.name if staff.badge_type else '-'
+        zone = staff.zone.code if staff.zone else '-'
+
+        data.append([str(idx), badge_number, full_name, badge_type, zone, ''])
+
+    # สร้างตาราง
+    table = Table(data, colWidths=[1.5*cm, 2.5*cm, 7*cm, 3*cm, 1.5*cm, 3*cm])
+
+    table.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, -1), 'THSarabun', 14),
+        ('FONT', (0, 0), (-1, 0), 'THSarabun-Bold', 14),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e0e0e0')),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # ลำดับ
+        ('ALIGN', (1, 1), (1, -1), 'CENTER'),  # เลขบัตร
+        ('ALIGN', (3, 1), (4, -1), 'CENTER'),  # ประเภท, โซน
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+
+    # วาดตาราง
+    table_width, table_height = table.wrap(width - 3*cm, height)
+
+    # ถ้าตารางสูงเกินหน้า ให้แบ่งหน้า
+    if y_position - table_height < 2*cm:
+        pdf.showPage()
+        y_position = height - 2*cm
+
+    table.drawOn(pdf, 1.5*cm, y_position - table_height)
+
+    pdf.save()
+    buffer.seek(0)
 
     # Return PDF
-    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="badge_receipt_{department.name}.pdf"'
 
     return response
+
 
 
 @login_required
@@ -755,6 +771,9 @@ def badge_printing_status_pdf(request, department_id):
     response['Content-Disposition'] = f'inline; filename="printing_status_{department.name}.pdf"'
 
     return response
+
+
+@login_required
 
 
 @login_required

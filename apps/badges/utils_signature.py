@@ -73,8 +73,8 @@ def add_signature_to_badge(badge_img, signatory, include_signature_image=True):
         # ตำแหน่งข้อความ - ชิดซ้ายคงที่ (ไม่ขึ้นกับลายเซ็น)
         text_x = 30  # ชิดซ้าย X=30 คงที่
 
-        # บรรทัดที่ 1: (ยศ + ชื่อ-นามสกุล) - เลื่อนขึ้น 20 (จาก -90 เป็น -110)
-        name_text_y = badge_height - 110
+        # บรรทัดที่ 1: (ยศ + ชื่อ-นามสกุล) - เลื่อนขึ้นอีก 10 เพื่อไม่ให้ทับกับตำแหน่ง
+        name_text_y = badge_height - 120
         rank_prefix = f"{signatory.rank}" if signatory.rank else ""
         full_name = f"({rank_prefix}{signatory.first_name} {signatory.last_name})"
         draw.text((text_x, name_text_y), full_name, fill=text_color, font=font_text)

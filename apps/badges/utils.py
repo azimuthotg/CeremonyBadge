@@ -163,7 +163,7 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
 
                 # นามสกุล - บรรทัดที่ 2
                 name_y += 60
-                draw.text((60, name_y), name_lines[1].strip(), fill=text_color, font=font_bold)
+                draw.text((30, name_y), name_lines[1].strip(), fill=text_color, font=font_bold)
             else:
                 # แสดงบรรทัดเดียว (ไม่มี |) - ปรับลงมา 10px
                 name_y = badge_height - 380
@@ -176,7 +176,7 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
 
             # บรรทัด 2: นามสกุล
             name_y += 60  # ขึ้นบรรทัดใหม่
-            draw.text((60, name_y), staff_profile.last_line, fill=text_color, font=font_bold)
+            draw.text((30, name_y), staff_profile.last_line, fill=text_color, font=font_bold)
 
     # 4. หน้าที่/ตำแหน่ง - ปรับ X ให้อยู่กลางโลโก้ตามความยาวข้อความ
     position_text = f" {staff_profile.position}"  # เพิ่มช่องว่างหน้า
