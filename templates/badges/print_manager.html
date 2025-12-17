@@ -729,8 +729,16 @@
         })
         .then(function(response) {
             if (!response.ok) {
-                return response.json().then(function(data) {
-                    throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                // Try to parse as JSON first, fallback to text if it fails
+                return response.text().then(function(text) {
+                    try {
+                        const data = JSON.parse(text);
+                        throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                    } catch (e) {
+                        // If not JSON, show the HTML error (likely a server error page)
+                        console.error('Server error response:', text);
+                        throw new Error('เกิดข้อผิดพลาดจาก server (ดู Console สำหรับรายละเอียด)');
+                    }
                 });
             }
             return response.blob();
@@ -781,8 +789,16 @@
         })
         .then(function(response) {
             if (!response.ok) {
-                return response.json().then(function(data) {
-                    throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                // Try to parse as JSON first, fallback to text if it fails
+                return response.text().then(function(text) {
+                    try {
+                        const data = JSON.parse(text);
+                        throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                    } catch (e) {
+                        // If not JSON, show the HTML error (likely a server error page)
+                        console.error('Server error response:', text);
+                        throw new Error('เกิดข้อผิดพลาดจาก server (ดู Console สำหรับรายละเอียด)');
+                    }
                 });
             }
             return response.blob();
