@@ -135,8 +135,11 @@
                     <a class="nav-link {% if 'badges/list' in request.path %}active{% endif %}" href="{% url 'badges:badge_list' %}">
                         <i class="bi bi-printer"></i> บัตรพร้อมพิมพ์
                     </a>
-                    <a class="nav-link {% if 'badges/print' in request.path %}active{% endif %}" href="{% url 'badges:print_manager' %}">
-                        <i class="bi bi-printer-fill"></i> พิมพ์บัตร (A4)
+                    <a class="nav-link {% if 'badges/print' in request.path and 'print-range' not in request.path %}active{% endif %}" href="{% url 'badges:print_manager' %}">
+                        <i class="bi bi-printer-fill"></i> พิมพ์บัตร (เลือก)
+                    </a>
+                    <a class="nav-link {% if 'badges/print-range' in request.path %}active{% endif %}" href="{% url 'badges:print_range' %}">
+                        <i class="bi bi-list-ol"></i> พิมพ์บัตร (ช่วง)
                     </a>
                 </div>
 

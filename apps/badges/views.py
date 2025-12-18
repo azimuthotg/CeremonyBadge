@@ -62,14 +62,12 @@ def create_badge(request, request_id):
         # 1. ดึงหมายเลขบัตรถัดไป
         badge_number = get_next_badge_number(staff_profile.badge_type)
 
-        # 2. ดึงรูปภาพ (ถ้ามี)
+        # 2. ดึงรูปภาพ (ถ้ามี) - ไม่ validate แล้ว, ทุกบัตรไม่จำเป็นต้องมีรูป
         photo = None
-        if staff_profile.badge_type.requires_photo:
-            try:
-                photo = Photo.objects.get(staff_profile=staff_profile)
-            except Photo.DoesNotExist:
-                messages.error(request, 'ไม่พบรูปภาพบุคลากร')
-                return redirect('approvals:approved_list')
+        try:
+            photo = Photo.objects.get(staff_profile=staff_profile)
+        except Photo.DoesNotExist:
+            pass  # No photo is OK for all badge types now
 
         # 3. สร้างรูปบัตร (พื้นฐาน)
         badge_img = generate_badge_image(staff_profile, badge_number, photo)
@@ -157,15 +155,12 @@ def bulk_create_badge(request):
                 skip_count += 1
                 continue
 
-            # ตรวจสอบรูปภาพ (ถ้าต้องการ)
+            # ดึงรูปภาพ (ถ้ามี) - ไม่ validate แล้ว, ทุกบัตรไม่จำเป็นต้องมีรูป
             photo = None
-            if staff_profile.badge_type.requires_photo:
-                try:
-                    photo = Photo.objects.get(staff_profile=staff_profile)
-                except Photo.DoesNotExist:
-                    error_messages.append(f'{staff_profile.full_name}: ไม่พบรูปภาพ')
-                    error_count += 1
-                    continue
+            try:
+                photo = Photo.objects.get(staff_profile=staff_profile)
+            except Photo.DoesNotExist:
+                pass  # No photo is OK for all badge types now
 
             # สร้างบัตร
             badge_number = get_next_badge_number(staff_profile.badge_type)
@@ -353,6 +348,126 @@ def badge_detail(request, badge_id):
     }
 
     return render(request, 'badges/badge_detail.html', context)
+
+
+@login_required
+@officer_required
+def update_badge_photo(request, badge_id):
+    """อัปโหลดหรือเปลี่ยนรูปภาพบัตร"""
+    from django.http import JsonResponse
+    from PIL import Image, ImageOps
+    from io import BytesIO
+    from django.core.files.uploadedfile import InMemoryUploadedFile
+    import sys
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    badge = get_object_or_404(Badge, pk=badge_id)
+    staff_profile = badge.staff_profile
+
+    try:
+        # ตรวจสอบว่ามีไฟล์ upload หรือไม่
+        if 'photo' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'ไม่พบไฟล์รูปภาพ'}, status=400)
+
+        photo_file = request.FILES['photo']
+
+        # ตรวจสอบขนาดไฟล์ (5MB)
+        if photo_file.size > 5 * 1024 * 1024:
+            return JsonResponse({'success': False, 'error': 'ไฟล์รูปภาพต้องมีขนาดไม่เกิน 5MB'}, status=400)
+
+        # ดึงข้อมูล crop
+        crop_x = int(request.POST.get('crop_x', 0))
+        crop_y = int(request.POST.get('crop_y', 0))
+        crop_width = int(request.POST.get('crop_width', 0))
+        crop_height = int(request.POST.get('crop_height', 0))
+
+        # เปิดรูปภาพ
+        img = Image.open(photo_file)
+
+        # แก้ไข orientation ตาม EXIF (สำคัญมาก! แก้ปัญหารูปเอียง)
+        img = ImageOps.exif_transpose(img)
+
+        # Crop รูปภาพ
+        if crop_width > 0 and crop_height > 0:
+            img_cropped = img.crop((crop_x, crop_y, crop_x + crop_width, crop_y + crop_height))
+        else:
+            img_cropped = img
+
+        # Resize เป็น 300x400 (อัตราส่วน 3:4)
+        img_cropped = img_cropped.resize((300, 400), Image.Resampling.LANCZOS)
+
+        # แปลงเป็น RGB (กรณีที่เป็น RGBA)
+        if img_cropped.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img_cropped.size, (255, 255, 255))
+            if img_cropped.mode == 'P':
+                img_cropped = img_cropped.convert('RGBA')
+            background.paste(img_cropped, mask=img_cropped.split()[-1] if img_cropped.mode == 'RGBA' else None)
+            img_cropped = background
+
+        # บันทึกลง BytesIO
+        output = BytesIO()
+        img_cropped.save(output, format='JPEG', quality=95)
+        output.seek(0)
+
+        # สร้าง InMemoryUploadedFile สำหรับ cropped photo
+        cropped_file = InMemoryUploadedFile(
+            output, 'ImageField',
+            f"cropped_{photo_file.name.split('.')[0]}.jpg",
+            'image/jpeg',
+            sys.getsizeof(output), None
+        )
+
+        # บันทึก Photo (update หรือ create)
+        photo, created = Photo.objects.update_or_create(
+            staff_profile=staff_profile,
+            defaults={
+                'original_photo': photo_file,
+                'cropped_photo': cropped_file,
+                'crop_data': {
+                    'x': crop_x,
+                    'y': crop_y,
+                    'width': crop_width,
+                    'height': crop_height
+                }
+            }
+        )
+
+        # Regenerate badge ด้วยรูปใหม่
+        badge_img = generate_badge_image(staff_profile, badge.badge_number, photo)
+
+        # เพิ่มลายเซ็น (ถ้ามี)
+        if badge.signatory:
+            from .utils_signature import add_signature_to_badge
+            include_sig_image = (badge.signature_type == 'electronic')
+            badge_img = add_signature_to_badge(badge_img, badge.signatory, include_sig_image)
+
+        # บันทึกรูปบัตรใหม่
+        badge_file_path = save_badge_image(badge_img, badge.badge_number)
+        badge.badge_file = badge_file_path
+        badge.save()
+
+        # บันทึก log
+        ApprovalLog.objects.create(
+            badge_request=BadgeRequest.objects.get(staff_profile=staff_profile),
+            action='update_photo',
+            previous_status='badge_created',
+            new_status='badge_created',
+            comment=f'เปลี่ยนรูปภาพบัตรหมายเลข {badge.badge_number}',
+            performed_by=request.user,
+            ip_address=get_client_ip(request)
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'อัปโหลดรูปภาพสำเร็จ',
+            'badge_image_url': badge.badge_file.url,
+            'photo_url': photo.cropped_photo.url if photo.cropped_photo else None
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
@@ -553,11 +668,10 @@ def edit_badge(request, badge_id):
 
                 # Regenerate badge image
                 photo = None
-                if new_badge_type.requires_photo:
-                    try:
-                        photo = Photo.objects.get(staff_profile=staff_profile)
-                    except Photo.DoesNotExist:
-                        pass
+                try:
+                    photo = Photo.objects.get(staff_profile=staff_profile)
+                except Photo.DoesNotExist:
+                    pass  # No photo is OK
 
                 # Generate new badge image
                 badge_img = generate_badge_image(staff_profile, new_badge_number, photo)
@@ -605,11 +719,10 @@ def edit_badge(request, badge_id):
                 if needs_regenerate:
                     # Regenerate badge with same number
                     photo = None
-                    if badge.badge_type.requires_photo:
-                        try:
-                            photo = Photo.objects.get(staff_profile=staff_profile)
-                        except Photo.DoesNotExist:
-                            pass
+                    try:
+                        photo = Photo.objects.get(staff_profile=staff_profile)
+                    except Photo.DoesNotExist:
+                        pass  # No photo is OK
 
                     # Generate badge image
                     badge_img = generate_badge_image(staff_profile, badge.badge_number, photo)
@@ -1110,6 +1223,308 @@ def generate_print_pdf(request):
         response['Content-Disposition'] = f'inline; filename="badges_print_{len(badges)}_sheets.pdf"'
         
         return response
-    
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ==========================================
+# Print Range (Range Selection)
+# ==========================================
+
+@login_required
+@officer_required
+def print_range(request):
+    """
+    หน้าพิมพ์บัตรแบบช่วง (Range Print)
+    - เลือกสีบัตร
+    - ระบุช่วงหมายเลข (เช่น 1-50)
+    - สร้าง PDF หลายหน้า (ถ้าเกิน 8 ใบ)
+    """
+    from django.db.models import Case, When, IntegerField
+
+    # Get all badge types (ordered by color)
+    badge_order = Case(
+        When(name='บัตรชมพู', then=1),
+        When(name='บัตรแดง', then=2),
+        When(name='บัตรเหลือง', then=3),
+        When(name='บัตรเขียว', then=4),
+        default=5,
+        output_field=IntegerField(),
+    )
+    badge_types = BadgeType.objects.filter(is_active=True).order_by(badge_order)
+
+    # Get badge counts for each type
+    badge_counts = {}
+    for badge_type in badge_types:
+        total = Badge.objects.filter(badge_type=badge_type, is_active=True).count()
+        unprinted = Badge.objects.filter(badge_type=badge_type, is_active=True, is_printed=False).count()
+
+        # Get latest badge number
+        latest_badge = Badge.objects.filter(badge_type=badge_type).order_by('-created_at').first()
+        latest_number = 0
+        if latest_badge:
+            # แปลงจากเลขไทยเป็นเลขอารบิก
+            number_part = latest_badge.badge_number.split('-')[1]
+            for digit in number_part:
+                arabic_digit = '๐๑๒๓๔๕๖๗๘๙'.index(digit) if digit in '๐๑๒๓๔๕๖๗๘๙' else 0
+                latest_number = latest_number * 10 + arabic_digit
+
+        badge_counts[badge_type.id] = {
+            'total': total,
+            'unprinted': unprinted,
+            'latest_number': latest_number
+        }
+
+    context = {
+        'badge_types': badge_types,
+        'badge_counts': badge_counts,
+    }
+
+    return render(request, 'badges/print_range.html', context)
+
+
+@login_required
+@officer_required
+def preview_range(request):
+    """
+    API สำหรับ preview รายการบัตรตามช่วงที่เลือก (AJAX)
+    """
+    import json
+    from django.http import JsonResponse
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        badge_type_id = data.get('badge_type_id')
+        start_number = int(data.get('start_number', 1))
+        end_number = int(data.get('end_number', 1))
+        only_unprinted = data.get('only_unprinted', False)
+
+        # Validate
+        if not badge_type_id:
+            return JsonResponse({'error': 'กรุณาเลือกสีบัตร'}, status=400)
+
+        if start_number < 1 or end_number < 1:
+            return JsonResponse({'error': 'หมายเลขต้องมากกว่า 0'}, status=400)
+
+        if start_number > end_number:
+            return JsonResponse({'error': 'หมายเลขเริ่มต้นต้องน้อยกว่าหมายเลขสิ้นสุด'}, status=400)
+
+        if end_number - start_number > 500:
+            return JsonResponse({'error': 'ช่วงหมายเลขต้องไม่เกิน 500'}, status=400)
+
+        # Get badge type
+        badge_type = BadgeType.objects.get(pk=badge_type_id)
+
+        # Generate list of badge numbers
+        from .utils import arabic_to_thai_numerals
+        badge_numbers = []
+        for num in range(start_number, end_number + 1):
+            thai_number = arabic_to_thai_numerals(str(num).zfill(3))
+            badge_number = f"{badge_type.color}-{thai_number}"
+            badge_numbers.append(badge_number)
+
+        # Query badges
+        badges = Badge.objects.filter(
+            badge_type=badge_type,
+            badge_number__in=badge_numbers,
+            is_active=True
+        ).select_related('staff_profile', 'badge_type').order_by('badge_number')
+
+        # Apply filter
+        if only_unprinted:
+            badges = badges.filter(is_printed=False)
+
+        # Build response data
+        badge_data = []
+        for badge in badges:
+            badge_data.append({
+                'id': badge.id,
+                'badge_number': badge.badge_number,
+                'staff_name': badge.staff_profile.full_name,
+                'department': badge.staff_profile.department.name,
+                'is_printed': badge.is_printed,
+                'printed_count': badge.printed_count,
+            })
+
+        # Calculate pages
+        total_badges = len(badge_data)
+        total_pages = (total_badges + 7) // 8  # Round up
+
+        return JsonResponse({
+            'success': True,
+            'badges': badge_data,
+            'total_badges': total_badges,
+            'total_pages': total_pages,
+            'requested_range': f"{start_number}-{end_number}",
+            'found_count': len(badge_data),
+            'missing_count': len(badge_numbers) - len(badge_data)
+        })
+
+    except BadgeType.DoesNotExist:
+        return JsonResponse({'error': 'ไม่พบประเภทบัตรที่เลือก'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'error': f'ข้อมูลไม่ถูกต้อง: {str(e)}'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@officer_required
+def generate_range_pdf(request):
+    """
+    สร้างไฟล์ PDF A4 สำหรับพิมพ์บัตรตามช่วงหมายเลข
+    รองรับหลายหน้า (ถ้าเกิน 8 ใบ)
+    """
+    import json
+    from django.http import JsonResponse, FileResponse
+    from io import BytesIO
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        badge_type_id = data.get('badge_type_id')
+        start_number = int(data.get('start_number', 1))
+        end_number = int(data.get('end_number', 1))
+        only_unprinted = data.get('only_unprinted', False)
+
+        # Validate
+        if not badge_type_id:
+            return JsonResponse({'error': 'กรุณาเลือกสีบัตร'}, status=400)
+
+        if start_number > end_number:
+            return JsonResponse({'error': 'หมายเลขเริ่มต้นต้องน้อยกว่าหมายเลขสิ้นสุด'}, status=400)
+
+        # Get badge type
+        badge_type = BadgeType.objects.get(pk=badge_type_id)
+
+        # Generate list of badge numbers
+        from .utils import arabic_to_thai_numerals
+        badge_numbers = []
+        for num in range(start_number, end_number + 1):
+            thai_number = arabic_to_thai_numerals(str(num).zfill(3))
+            badge_number = f"{badge_type.color}-{thai_number}"
+            badge_numbers.append(badge_number)
+
+        # Query badges
+        badges = Badge.objects.filter(
+            badge_type=badge_type,
+            badge_number__in=badge_numbers,
+            is_active=True
+        ).select_related('staff_profile').order_by('badge_number')
+
+        # Apply filter
+        if only_unprinted:
+            badges = badges.filter(is_printed=False)
+
+        if not badges.exists():
+            return JsonResponse({'error': 'ไม่พบบัตรในช่วงที่เลือก'}, status=404)
+
+        # Create PDF
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=A4)
+        page_width, page_height = A4
+
+        # Badge dimensions (same as print_manager)
+        badge_width_mm = 105 * mm
+        badge_height_mm = 74.25 * mm
+        margin_x = 0
+        margin_y = 0
+        spacing_x = -0.3 * mm
+        spacing_y = -0.7 * mm
+
+        # Calculate positions (2 columns x 4 rows)
+        positions = []
+        for row in range(4):
+            for col in range(2):
+                x = margin_x + col * (badge_width_mm + spacing_x)
+                y = page_height - margin_y - (row + 1) * badge_height_mm - row * spacing_y
+                positions.append((x, y))
+
+        # Convert badges to list
+        badge_list = list(badges)
+        total_badges = len(badge_list)
+
+        # Process badges in chunks of 8
+        for page_num in range((total_badges + 7) // 8):
+            if page_num > 0:
+                pdf.showPage()  # Start new page
+
+            start_idx = page_num * 8
+            end_idx = min(start_idx + 8, total_badges)
+            page_badges = badge_list[start_idx:end_idx]
+
+            # Add badges to current page
+            for idx, badge in enumerate(page_badges):
+                x, y = positions[idx]
+
+                # Draw badge image
+                if badge.badge_file:
+                    try:
+                        badge_img_path = badge.badge_file.path
+                        pdf.drawImage(badge_img_path, x, y,
+                                    width=badge_width_mm, height=badge_height_mm,
+                                    preserveAspectRatio=False)
+                    except Exception as e:
+                        print(f"Error adding badge {badge.badge_number}: {e}")
+
+        # Save PDF
+        pdf.save()
+        buffer.seek(0)
+
+        # Update print count and log for all badges
+        for badge in badge_list:
+            badge.printed_count += 1
+            badge.is_printed = True
+            badge.save()
+
+            # Log print action
+            PrintLog.objects.create(
+                badge=badge,
+                printed_by=request.user,
+                notes=f'พิมพ์บัตรผ่านระบบช่วง (Range: {start_number}-{end_number}, รวม {total_badges} ใบ)',
+                signature_type=badge.signature_type,
+                signatory=badge.signatory
+            )
+
+            # Update badge request status if needed
+            try:
+                badge_request = BadgeRequest.objects.get(staff_profile=badge.staff_profile)
+                if badge_request.status == 'badge_created':
+                    previous_status = badge_request.status
+                    badge_request.status = 'printed'
+                    badge_request.save()
+
+                    ApprovalLog.objects.create(
+                        badge_request=badge_request,
+                        action='printed',
+                        previous_status=previous_status,
+                        new_status='printed',
+                        comment=f'พิมพ์บัตรครั้งที่ {badge.printed_count} (Range Print)',
+                        performed_by=request.user,
+                        ip_address=get_client_ip(request)
+                    )
+            except BadgeRequest.DoesNotExist:
+                pass
+
+        # Return PDF file
+        response = FileResponse(buffer, content_type='application/pdf')
+        filename = f"badges_range_{badge_type.color}_{start_number}-{end_number}_{total_badges}badges.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+        return response
+
+    except BadgeType.DoesNotExist:
+        return JsonResponse({'error': 'ไม่พบประเภทบัตรที่เลือก'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'error': f'ข้อมูลไม่ถูกต้อง: {str(e)}'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

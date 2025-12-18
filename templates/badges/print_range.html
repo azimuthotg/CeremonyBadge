@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}พิมพ์บัตรแบบช่วง{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="bi bi-printer-fill"></i> พิมพ์บัตรแบบช่วง (Range Print)</h2>
+                    <p class="text-muted mb-0">ระบุสีบัตรและช่วงหมายเลขที่ต้องการพิมพ์</p>
+                </div>
+                <a href="{% url 'badges:print_manager' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> กลับไปพิมพ์แบบเลือก
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Form -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <strong><i class="bi bi-sliders"></i> เลือกช่วงบัตร</strong>
+                </div>
+                <div class="card-body">
+                    <!-- Badge Type Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-palette-fill"></i> สีบัตร <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="badge-type-select" required>
+                            <option value="">-- เลือกสีบัตร --</option>
+                            {% for badge_type in badge_types %}
+                            <option value="{{ badge_type.id }}"
+                                    data-color="{{ badge_type.color }}"
+                                    data-color-code="{{ badge_type.color_code }}"
+                                    data-total="{{ badge_counts|get_item:badge_type.id|get_item:'total' }}"
+                                    data-unprinted="{{ badge_counts|get_item:badge_type.id|get_item:'unprinted' }}"
+                                    data-latest="{{ badge_counts|get_item:badge_type.id|get_item:'latest_number' }}">
+                                {{ badge_type.name }}
+                                (ทั้งหมด {{ badge_counts|get_item:badge_type.id|get_item:'total' }} ใบ,
+                                 ยังไม่พิมพ์ {{ badge_counts|get_item:badge_type.id|get_item:'unprinted' }} ใบ)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Badge Info Card (shown when badge type selected) -->
+                    <div id="badge-info-card" class="alert alert-light d-none mb-3">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <small class="text-muted">เลขบัตรล่าสุด:</small>
+                                <div class="fw-bold" id="info-latest">-</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">จำนวนทั้งหมด:</small>
+                                <div class="fw-bold" id="info-total">-</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">ยังไม่พิมพ์:</small>
+                                <div class="fw-bold text-warning" id="info-unprinted">-</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">พิมพ์แล้ว:</small>
+                                <div class="fw-bold text-success" id="info-printed">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Range Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-list-ol"></i> ช่วงหมายเลข <span class="text-danger">*</span>
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small">จาก (เลขอารบิก)</label>
+                                <input type="number" class="form-control" id="start-number"
+                                       placeholder="1" min="1" max="999" value="1" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">ถึง (เลขอารบิก)</label>
+                                <input type="number" class="form-control" id="end-number"
+                                       placeholder="50" min="1" max="999" value="" required>
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> ระบุช่วงหมายเลขด้วยตัวเลขอารบิก (เช่น 1-50)
+                            ระบบจะแปลงเป็นเลขไทยอัตโนมัติ
+                        </small>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-funnel-fill"></i> ตัวกรอง
+                        </label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="only-unprinted" checked>
+                            <label class="form-check-label" for="only-unprinted">
+                                เฉพาะบัตรที่ยังไม่พิมพ์เท่านั้น
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" id="btn-preview">
+                            <i class="bi bi-eye-fill"></i> แสดงรายการ
+                        </button>
+                        <button class="btn btn-success d-none" id="btn-generate-pdf">
+                            <i class="bi bi-file-pdf-fill"></i> สร้าง PDF
+                        </button>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="alert alert-info mt-3 mb-0">
+                        <small>
+                            <i class="bi bi-lightbulb-fill"></i> <strong>คำแนะนำ:</strong><br>
+                            • เลือกสีบัตรที่ต้องการพิมพ์<br>
+                            • ระบุช่วงหมายเลขบัตร (สูงสุด 500 ใบ)<br>
+                            • กดแสดงรายการเพื่อ preview<br>
+                            • ระบบสร้าง PDF หลายหน้า (8 ใบ/หน้า)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Preview -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <strong><i class="bi bi-list-check"></i> รายการบัตร</strong>
+                    <span class="badge bg-light text-dark ms-2" id="preview-count">0 ใบ</span>
+                </div>
+                <div class="card-body">
+                    <!-- Preview Content -->
+                    <div id="preview-content">
+                        <!-- Empty State -->
+                        <div class="text-center text-muted py-5" id="preview-empty">
+                            <i class="bi bi-inbox" style="font-size: 4rem; opacity: 0.3;"></i>
+                            <p class="mt-3 mb-0">กรุณาเลือกสีบัตรและระบุช่วงหมายเลข</p>
+                            <small>แล้วกด "แสดงรายการ" เพื่อดูบัตรที่จะพิมพ์</small>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div class="text-center py-5 d-none" id="preview-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">กำลังโหลด...</span>
+                            </div>
+                            <p class="mt-3 text-muted">กำลังค้นหาบัตร...</p>
+                        </div>
+
+                        <!-- Preview Summary (shown after preview) -->
+                        <div class="d-none" id="preview-summary">
+                            <div class="alert alert-success mb-3">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <small class="text-muted">ช่วงที่เลือก:</small>
+                                        <div class="fw-bold" id="summary-range">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">พบบัตร:</small>
+                                        <div class="fw-bold text-success" id="summary-found">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">จำนวนหน้า A4:</small>
+                                        <div class="fw-bold text-primary" id="summary-pages">-</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Warning if some badges missing -->
+                            <div class="alert alert-warning d-none" id="warning-missing">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                พบบัตร <strong id="warning-missing-count">0</strong> ใบที่ไม่มีในระบบ
+                            </div>
+
+                            <!-- Preview Table -->
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-hover">
+                                    <thead class="sticky-top bg-light">
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th>หมายเลข</th>
+                                            <th>ชื่อ-นามสกุล</th>
+                                            <th>หน่วยงาน</th>
+                                            <th style="width: 80px;" class="text-center">สถานะ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="preview-table-body">
+                                        <!-- Data will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF Preview Modal -->
+<div class="modal fade" id="pdfModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-pdf-fill"></i> Preview PDF
+                    (<span id="modal-badge-count">0</span> ใบ, <span id="modal-page-count">0</span> หน้า)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="height: calc(100vh - 120px);">
+                <div id="pdf-preview-content" class="h-100 d-flex align-items-center justify-content-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">กำลังสร้าง PDF...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> ปิด
+                </button>
+                <button type="button" class="btn btn-success" id="btn-download-from-modal">
+                    <i class="bi bi-download"></i> ดาวน์โหลด PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#preview-table-body tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    let currentPreviewData = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        initBadgeTypeSelect();
+        initPreviewButton();
+        initGeneratePdfButton();
+    });
+
+    function initBadgeTypeSelect() {
+        const select = document.getElementById('badge-type-select');
+        select.addEventListener('change', function() {
+            const option = this.options[this.selectedIndex];
+
+            if (this.value) {
+                // Show badge info
+                const infoCard = document.getElementById('badge-info-card');
+                const latestNumber = option.dataset.latest;
+                const total = option.dataset.total;
+                const unprinted = option.dataset.unprinted;
+                const printed = parseInt(total) - parseInt(unprinted);
+
+                document.getElementById('info-latest').textContent = latestNumber || '0';
+                document.getElementById('info-total').textContent = total;
+                document.getElementById('info-unprinted').textContent = unprinted;
+                document.getElementById('info-printed').textContent = printed;
+
+                infoCard.classList.remove('d-none');
+
+                // Set suggested range
+                if (parseInt(unprinted) > 0) {
+                    document.getElementById('start-number').value = '1';
+                    document.getElementById('end-number').value = latestNumber || '1';
+                }
+            } else {
+                document.getElementById('badge-info-card').classList.add('d-none');
+            }
+
+            // Hide preview when changing badge type
+            hidePreview();
+        });
+    }
+
+    function initPreviewButton() {
+        document.getElementById('btn-preview').addEventListener('click', function() {
+            const badgeTypeId = document.getElementById('badge-type-select').value;
+            const startNumber = parseInt(document.getElementById('start-number').value);
+            const endNumber = parseInt(document.getElementById('end-number').value);
+            const onlyUnprinted = document.getElementById('only-unprinted').checked;
+
+            // Validate
+            if (!badgeTypeId) {
+                alert('กรุณาเลือกสีบัตร');
+                return;
+            }
+
+            if (!startNumber || !endNumber) {
+                alert('กรุณาระบุช่วงหมายเลข');
+                return;
+            }
+
+            if (startNumber > endNumber) {
+                alert('หมายเลขเริ่มต้นต้องน้อยกว่าหมายเลขสิ้นสุด');
+                return;
+            }
+
+            if (endNumber - startNumber > 500) {
+                alert('ช่วงหมายเลขต้องไม่เกิน 500');
+                return;
+            }
+
+            // Show loading
+            showLoading();
+
+            // Call API
+            fetch("{% url 'badges:preview_range' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    badge_type_id: badgeTypeId,
+                    start_number: startNumber,
+                    end_number: endNumber,
+                    only_unprinted: onlyUnprinted
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                showPreview(data);
+                currentPreviewData = data;
+            })
+            .catch(error => {
+                alert('เกิดข้อผิดพลาด: ' + error.message);
+                hidePreview();
+            });
+        });
+    }
+
+    function initGeneratePdfButton() {
+        document.getElementById('btn-generate-pdf').addEventListener('click', function() {
+            if (!currentPreviewData || currentPreviewData.total_badges === 0) {
+                alert('กรุณาแสดงรายการก่อน');
+                return;
+            }
+
+            const badgeTypeId = document.getElementById('badge-type-select').value;
+            const startNumber = parseInt(document.getElementById('start-number').value);
+            const endNumber = parseInt(document.getElementById('end-number').value);
+            const onlyUnprinted = document.getElementById('only-unprinted').checked;
+
+            // Confirm if many badges
+            if (currentPreviewData.total_badges > 40) {
+                if (!confirm(`จะพิมพ์บัตร ${currentPreviewData.total_badges} ใบ (${currentPreviewData.total_pages} หน้า) ใช่หรือไม่?`)) {
+                    return;
+                }
+            }
+
+            const btn = this;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังสร้าง PDF...';
+            btn.disabled = true;
+
+            // Generate PDF
+            fetch("{% url 'badges:generate_range_pdf' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    badge_type_id: badgeTypeId,
+                    start_number: startNumber,
+                    end_number: endNumber,
+                    only_unprinted: onlyUnprinted
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                    });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Download PDF
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `badges_range_${startNumber}-${endNumber}_${currentPreviewData.total_badges}badges.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                alert('ดาวน์โหลด PDF สำเร็จ!\nบัตร ' + currentPreviewData.total_badges + ' ใบได้รับการบันทึกการพิมพ์แล้ว');
+
+                // Reset form
+                hidePreview();
+                document.getElementById('start-number').value = '';
+                document.getElementById('end-number').value = '';
+            })
+            .catch(error => {
+                alert('เกิดข้อผิดพลาด: ' + error.message);
+            })
+            .finally(() => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            });
+        });
+    }
+
+    function showLoading() {
+        document.getElementById('preview-empty').classList.add('d-none');
+        document.getElementById('preview-summary').classList.add('d-none');
+        document.getElementById('preview-loading').classList.remove('d-none');
+        document.getElementById('btn-generate-pdf').classList.add('d-none');
+    }
+
+    function showPreview(data) {
+        // Hide loading
+        document.getElementById('preview-loading').classList.add('d-none');
+        document.getElementById('preview-empty').classList.add('d-none');
+
+        // Show summary
+        document.getElementById('preview-summary').classList.remove('d-none');
+        document.getElementById('summary-range').textContent = data.requested_range;
+        document.getElementById('summary-found').textContent = `${data.found_count} ใบ`;
+        document.getElementById('summary-pages').textContent = `${data.total_pages} หน้า`;
+        document.getElementById('preview-count').textContent = `${data.total_badges} ใบ`;
+
+        // Show warning if missing
+        if (data.missing_count > 0) {
+            document.getElementById('warning-missing').classList.remove('d-none');
+            document.getElementById('warning-missing-count').textContent = data.missing_count;
+        } else {
+            document.getElementById('warning-missing').classList.add('d-none');
+        }
+
+        // Populate table
+        const tbody = document.getElementById('preview-table-body');
+        tbody.innerHTML = '';
+
+        data.badges.forEach((badge, index) => {
+            const row = document.createElement('tr');
+
+            let statusBadge = '';
+            if (badge.is_printed) {
+                statusBadge = `<span class="badge bg-success">${badge.printed_count}x</span>`;
+            } else {
+                statusBadge = '<span class="badge bg-warning text-dark">ยังไม่พิมพ์</span>';
+            }
+
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td><span class="badge bg-secondary">${badge.badge_number}</span></td>
+                <td>${badge.staff_name}</td>
+                <td><small>${badge.department}</small></td>
+                <td class="text-center">${statusBadge}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Show generate PDF button
+        if (data.total_badges > 0) {
+            document.getElementById('btn-generate-pdf').classList.remove('d-none');
+        }
+    }
+
+    function hidePreview() {
+        document.getElementById('preview-empty').classList.remove('d-none');
+        document.getElementById('preview-summary').classList.add('d-none');
+        document.getElementById('preview-loading').classList.add('d-none');
+        document.getElementById('btn-generate-pdf').classList.add('d-none');
+        document.getElementById('preview-count').textContent = '0 ใบ';
+        currentPreviewData = null;
+    }
+})();
+</script>
+{% endblock %}
