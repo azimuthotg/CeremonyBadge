@@ -2,6 +2,10 @@
 
 {% block title %}แก้ไขบัตร{% endblock %}
 
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4 py-4">
     <!-- Header -->
@@ -99,6 +103,34 @@
                                 <i class="bi bi-exclamation-triangle-fill"></i>
                                 <strong>คำเตือน:</strong> ถ้าเปลี่ยนสีบัตร จะได้หมายเลขบัตรใหม่!
                             </div>
+                        </div>
+
+                        <!-- Photo Section -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-camera-fill"></i> รูปภาพบนบัตร
+                            </label>
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    {% if staff_profile.photo and staff_profile.photo.cropped_photo %}
+                                        <img id="current-photo-preview" src="{{ staff_profile.photo.cropped_photo.url }}"
+                                             alt="Photo" class="img-fluid rounded mb-2"
+                                             style="max-height: 200px; border: 2px solid #ddd;">
+                                    {% else %}
+                                        <div id="current-photo-preview" class="py-4 bg-light rounded mb-2">
+                                            <i class="bi bi-person-circle" style="font-size: 4rem; color: #ccc;"></i>
+                                            <p class="text-muted mt-2 mb-0">ยังไม่มีรูปภาพ</p>
+                                        </div>
+                                    {% endif %}
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#photoUploadModal">
+                                        <i class="bi bi-camera"></i>
+                                        {% if staff_profile.photo %}เปลี่ยนรูป{% else %}เพิ่มรูป{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i> เปลี่ยนรูปจะสร้างบัตรใหม่ทันที - ต้องพิมพ์บัตรใหม่
+                            </small>
                         </div>
 
                         <!-- Revision Reason (Required) -->
@@ -203,6 +235,80 @@
     </div>
 </div>
 
+<!-- Photo Upload Modal -->
+<div class="modal fade" id="photoUploadModal" tabindex="-1" aria-labelledby="photoUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header badge-header-{{ badge.badge_type.color }}">
+                <h5 class="modal-title" id="photoUploadModalLabel">
+                    <i class="bi bi-camera-fill"></i> อัปโหลด/เปลี่ยนรูปภาพ
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="photoUploadForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>คำแนะนำ:</strong>
+                        กรุณาเลือกรูปถ่ายที่ชัดเจน หน้าตรง พื้นหลังสีขาวหรือสีอ่อน ไฟล์ไม่เกิน 5MB
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="photo_file" class="form-label">เลือกรูปถ่าย</label>
+                        <input type="file" class="form-control" id="photo_file" name="photo" accept="image/*" required>
+                    </div>
+
+                    <!-- Image Preview & Crop Container -->
+                    <div id="modal-crop-container" style="display:none;">
+                        <h6 class="mt-4">ครอปรูปภาพ:</h6>
+                        <p class="text-muted small">ลากเพื่อเลือกส่วนที่ต้องการ (อัตราส่วน 3:4)</p>
+
+                        <!-- Control Buttons (Moved to Top) -->
+                        <div class="text-center mb-3">
+                            <button type="button" id="modal-btn-rotate-left" class="btn btn-sm btn-outline-secondary me-2">
+                                <i class="bi bi-arrow-counterclockwise"></i> หมุนซ้าย
+                            </button>
+                            <button type="button" id="modal-btn-rotate-right" class="btn btn-sm btn-outline-secondary me-2">
+                                <i class="bi bi-arrow-clockwise"></i> หมุนขวา
+                            </button>
+                            <button type="button" id="modal-btn-reset" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise"></i> รีเซ็ต
+                            </button>
+                        </div>
+
+                        <!-- Image with max-width 400px -->
+                        <div class="text-center mb-3">
+                            <img id="modal-image-to-crop" src="" style="max-width: 400px; width: 100%; display: block; margin: 0 auto;">
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields for crop data -->
+                    <input type="hidden" id="modal_crop_x" name="crop_x">
+                    <input type="hidden" id="modal_crop_y" name="crop_y">
+                    <input type="hidden" id="modal_crop_width" name="crop_width">
+                    <input type="hidden" id="modal_crop_height" name="crop_height">
+
+                    <!-- Upload Progress -->
+                    <div id="upload-progress" class="mt-3" style="display:none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                        </div>
+                        <p class="text-center text-muted mt-2">กำลังอัปโหลดและสร้างบัตรใหม่...</p>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" id="btn-upload-photo" class="btn btn-primary">
+                    <i class="bi bi-upload"></i> อัปโหลด
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Warn user if changing badge type
 document.getElementById('badge_type').addEventListener('change', function() {
@@ -236,6 +342,185 @@ document.getElementById('editBadgeForm').addEventListener('submit', function(e) 
             e.preventDefault();
             return false;
         }
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+<script>
+// Photo Upload Modal - Cropper.js
+let modalCropper = null;
+
+document.getElementById('photo_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('ไฟล์รูปภาพต้องมีขนาดไม่เกิน 5MB');
+            e.target.value = '';
+            return;
+        }
+
+        // Validate file type
+        if (!file.type.match('image.*')) {
+            alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+            e.target.value = '';
+            return;
+        }
+
+        // Show crop container
+        const cropContainer = document.getElementById('modal-crop-container');
+        cropContainer.style.display = 'block';
+
+        // Load image
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const image = document.getElementById('modal-image-to-crop');
+            image.src = event.target.result;
+
+            // Destroy previous cropper if exists
+            if (modalCropper) {
+                modalCropper.destroy();
+            }
+
+            // Initialize Cropper.js with 3:4 aspect ratio
+            modalCropper = new Cropper(image, {
+                aspectRatio: 3 / 4,
+                viewMode: 1,
+                autoCropArea: 0.8,
+                responsive: true,
+                background: false,
+                crop(event) {
+                    // Update hidden fields with crop data
+                    document.getElementById('modal_crop_x').value = Math.round(event.detail.x);
+                    document.getElementById('modal_crop_y').value = Math.round(event.detail.y);
+                    document.getElementById('modal_crop_width').value = Math.round(event.detail.width);
+                    document.getElementById('modal_crop_height').value = Math.round(event.detail.height);
+                }
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Modal - Rotate left button
+document.getElementById('modal-btn-rotate-left').addEventListener('click', function() {
+    if (modalCropper) {
+        modalCropper.rotate(-90);
+    }
+});
+
+// Modal - Rotate right button
+document.getElementById('modal-btn-rotate-right').addEventListener('click', function() {
+    if (modalCropper) {
+        modalCropper.rotate(90);
+    }
+});
+
+// Modal - Reset button
+document.getElementById('modal-btn-reset').addEventListener('click', function() {
+    if (modalCropper) {
+        modalCropper.reset();
+    }
+});
+
+// Upload Photo Button
+document.getElementById('btn-upload-photo').addEventListener('click', function() {
+    const fileInput = document.getElementById('photo_file');
+    if (!fileInput.files || !fileInput.files[0]) {
+        alert('กรุณาเลือกรูปถ่าย');
+        return;
+    }
+
+    // Check if crop data exists
+    const cropX = document.getElementById('modal_crop_x').value;
+    if (!cropX) {
+        alert('กรุณารอให้โหลดรูปภาพเสร็จ');
+        return;
+    }
+
+    // Prepare FormData
+    const formData = new FormData(document.getElementById('photoUploadForm'));
+
+    // Show progress
+    document.getElementById('upload-progress').style.display = 'block';
+    document.getElementById('btn-upload-photo').disabled = true;
+
+    // AJAX Upload
+    fetch("{% url 'badges:update_badge_photo' badge.id %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Success - Update preview and badge image
+            if (data.photo_url) {
+                // Update photo preview in form
+                const photoPreview = document.getElementById('current-photo-preview');
+                if (photoPreview.tagName === 'IMG') {
+                    photoPreview.src = data.photo_url + '?t=' + new Date().getTime();
+                } else {
+                    // Replace placeholder div with img
+                    const newImg = document.createElement('img');
+                    newImg.id = 'current-photo-preview';
+                    newImg.src = data.photo_url + '?t=' + new Date().getTime();
+                    newImg.alt = 'Photo';
+                    newImg.className = 'img-fluid rounded mb-2';
+                    newImg.style.cssText = 'max-height: 200px; border: 2px solid #ddd;';
+                    photoPreview.parentNode.replaceChild(newImg, photoPreview);
+                }
+            }
+
+            // Update badge preview on right side
+            if (data.badge_image_url) {
+                const badgeImg = document.querySelector('.card-body img[alt="Badge"]');
+                if (badgeImg) {
+                    badgeImg.src = data.badge_image_url + '?t=' + new Date().getTime();
+                }
+            }
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('photoUploadModal'));
+            modal.hide();
+
+            // Reset form
+            document.getElementById('photoUploadForm').reset();
+            document.getElementById('modal-crop-container').style.display = 'none';
+            if (modalCropper) {
+                modalCropper.destroy();
+                modalCropper = null;
+            }
+
+            // Show success message
+            alert('อัปโหลดรูปภาพและสร้างบัตรใหม่สำเร็จ!');
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('เกิดข้อผิดพลาดในการอัปโหลด: ' + error.message);
+    })
+    .finally(() => {
+        // Hide progress and enable button
+        document.getElementById('upload-progress').style.display = 'none';
+        document.getElementById('btn-upload-photo').disabled = false;
+    });
+});
+
+// Reset modal when closed
+document.getElementById('photoUploadModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('photoUploadForm').reset();
+    document.getElementById('modal-crop-container').style.display = 'none';
+    if (modalCropper) {
+        modalCropper.destroy();
+        modalCropper = null;
     }
 });
 </script>

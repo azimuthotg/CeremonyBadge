@@ -11,11 +11,13 @@ urlpatterns = [
     # Actions
     path('approve/<int:request_id>/', views.approve_request, name='approve_request'),
     path('reject/<int:request_id>/', views.reject_request, name='reject_request'),
+    path('send-back/<int:request_id>/', views.send_back_for_revision, name='send_back_for_revision'),
 
     # Bulk actions
     path('bulk/approve/', views.bulk_approve, name='bulk_approve'),
     path('bulk/reject/', views.bulk_reject, name='bulk_reject'),
     path('bulk/edit-approved/', views.bulk_edit_approved, name='bulk_edit_approved'),  # Bulk edit for approved items
+    path('bulk/send-back-for-revision/', views.bulk_send_back_for_revision, name='bulk_send_back_for_revision'),  # Bulk send back from approved
 
     # Lists
     path('approved/', views.approved_list, name='approved_list'),

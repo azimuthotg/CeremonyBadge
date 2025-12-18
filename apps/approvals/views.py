@@ -380,6 +380,50 @@ def approved_list(request):
 
 @login_required
 @officer_required
+def send_back_for_revision(request, request_id):
+    """ส่งกลับแก้ไขจากสถานะ approved"""
+    if request.method != 'POST':
+        return redirect('approvals:approved_list')
+
+    badge_request = get_object_or_404(BadgeRequest, pk=request_id)
+
+    # Check if can send back (only approved status, not badge_created/printed/completed)
+    if badge_request.status != 'approved':
+        messages.error(request, 'สามารถส่งกลับได้เฉพาะรายการที่อนุมัติแล้วและยังไม่ได้สร้างบัตรเท่านั้น')
+        return redirect('approvals:approved_list')
+
+    # Get rejection reason
+    rejection_reason = request.POST.get('rejection_reason', '').strip()
+    if not rejection_reason:
+        messages.error(request, 'กรุณาระบุเหตุผลในการส่งกลับ')
+        return redirect('approvals:approved_list')
+
+    # Save previous status
+    previous_status = badge_request.status
+
+    # Update status to rejected
+    badge_request.status = 'rejected'
+    badge_request.rejection_reason = rejection_reason
+    badge_request.reviewed_by = request.user
+    badge_request.save()
+
+    # Create approval log
+    ApprovalLog.objects.create(
+        badge_request=badge_request,
+        action='reject',
+        previous_status=previous_status,
+        new_status='rejected',
+        comment=f'ส่งกลับจากสถานะอนุมัติแล้ว: {rejection_reason}',
+        performed_by=request.user,
+        ip_address=get_client_ip(request)
+    )
+
+    messages.success(request, f'ส่งกลับคำขอของ {badge_request.staff_profile.full_name} เรียบร้อยแล้ว')
+    return redirect('approvals:approved_list')
+
+
+@login_required
+@officer_required
 def bulk_edit_approved(request):
     """แก้ไขข้อมูลหลายรายการพร้อมกัน (approved list)"""
     if request.method != 'POST':
@@ -623,6 +667,73 @@ def bulk_reject(request):
         messages.warning(request, f'ไม่สามารถส่งกลับได้ {error_count} รายการ')
 
     return redirect('approvals:pending_list')
+
+
+@login_required
+@officer_required
+def bulk_send_back_for_revision(request):
+    """ส่งกลับแก้ไขหลายรายการพร้อมกัน (จากสถานะ approved)"""
+    if request.method != 'POST':
+        return redirect('approvals:approved_list')
+
+    request_ids = request.POST.getlist('request_ids')
+    rejection_reason = request.POST.get('rejection_reason', '').strip()
+
+    if not request_ids:
+        messages.error(request, 'กรุณาเลือกรายการที่ต้องการส่งกลับ')
+        return redirect('approvals:approved_list')
+
+    if not rejection_reason:
+        messages.error(request, 'กรุณาระบุเหตุผลในการส่งกลับ')
+        return redirect('approvals:approved_list')
+
+    success_count = 0
+    error_count = 0
+    error_messages = []
+
+    for request_id in request_ids:
+        try:
+            badge_request = BadgeRequest.objects.get(pk=request_id)
+
+            # Check if can send back (only approved status, not badge_created/printed/completed)
+            if badge_request.status != 'approved':
+                error_count += 1
+                error_messages.append(f'{badge_request.staff_profile.full_name}: ส่งกลับได้เฉพาะสถานะอนุมัติแล้วเท่านั้น (สถานะปัจจุบัน: {badge_request.get_status_display()})')
+                continue
+
+            # Save previous status
+            previous_status = badge_request.status
+
+            # Update status to rejected
+            badge_request.status = 'rejected'
+            badge_request.rejection_reason = rejection_reason
+            badge_request.reviewed_by = request.user
+            badge_request.save()
+
+            # Create approval log
+            ApprovalLog.objects.create(
+                badge_request=badge_request,
+                action='reject',
+                previous_status=previous_status,
+                new_status='rejected',
+                comment=f'ส่งกลับจากสถานะอนุมัติแล้ว (bulk): {rejection_reason}',
+                performed_by=request.user,
+                ip_address=get_client_ip(request)
+            )
+
+            success_count += 1
+
+        except BadgeRequest.DoesNotExist:
+            error_count += 1
+            error_messages.append(f'ไม่พบคำขอ ID: {request_id}')
+
+    if success_count > 0:
+        messages.success(request, f'ส่งกลับสำเร็จ {success_count} รายการ')
+    if error_count > 0:
+        for error_msg in error_messages:
+            messages.warning(request, error_msg)
+
+    return redirect('approvals:approved_list')
 
 
 @login_required

@@ -99,6 +99,9 @@
                     <button type="button" class="btn btn-warning me-2" id="bulkEditBtn">
                         <i class="bi bi-pencil-square"></i> แก้ไขรายการที่เลือก
                     </button>
+                    <button type="button" class="btn btn-danger me-2" id="bulkSendBackBtn">
+                        <i class="bi bi-arrow-counterclockwise"></i> ส่งกลับแก้ไข
+                    </button>
                     <button type="button" class="btn btn-success me-2" id="bulkCreateBadgeBtn">
                         <i class="bi bi-credit-card"></i> สร้างบัตรที่เลือก
                     </button>
@@ -169,6 +172,13 @@
                                             <a href="{% url 'approvals:review_detail' req.id %}" class="btn btn-outline-primary" title="ดูรายละเอียด">
                                                 <i class="bi bi-eye"></i>
                                             </a>
+                                            <button type="button" class="btn btn-warning send-back-btn"
+                                                    data-request-id="{{ req.id }}"
+                                                    data-staff-name="{{ req.staff_profile.first_line }} {{ req.staff_profile.last_line }}"
+                                                    data-send-back-url="{% url 'approvals:send_back_for_revision' req.id %}"
+                                                    title="ส่งกลับแก้ไข">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
                                             <a href="{% url 'badges:create_badge' req.id %}" class="btn btn-success" title="สร้างบัตร">
                                                 <i class="bi bi-credit-card"></i>
                                             </a>
@@ -283,6 +293,106 @@
         </div>
     </div>
 </div>
+
+<!-- Send Back for Revision Modal (Single) -->
+<div class="modal fade" id="sendBackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise"></i> ส่งกลับแก้ไข</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="send-back-form" action="">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังส่งกลับคำขอของ <strong id="send-back-staff-name"></strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>เหตุผลในการส่งกลับ</strong> <span class="text-danger">*</span></label>
+                        <select class="form-select mb-2" id="send-back-reason-select">
+                            <option value="">-- เลือกเหตุผล --</option>
+                            <option value="ต้องการแก้ไขรูปภาพ">ต้องการแก้ไขรูปภาพ</option>
+                            <option value="ต้องการแก้ไขชื่อ-นามสกุล">ต้องการแก้ไขชื่อ-นามสกุล</option>
+                            <option value="ต้องการแก้ไขตำแหน่ง">ต้องการแก้ไขตำแหน่ง</option>
+                            <option value="ต้องการแก้ไขโซน">ต้องการแก้ไขโซน</option>
+                            <option value="อื่นๆ">อื่นๆ (ระบุด้านล่าง)</option>
+                        </select>
+                        <textarea class="form-control" name="rejection_reason" id="send-back-reason-text" rows="3" placeholder="ระบุเหตุผลเพิ่มเติม (ถ้ามี)" required></textarea>
+                        <small class="form-text text-muted">เหตุผลนี้จะถูกส่งกลับไปยังผู้ยื่นคำขอเพื่อดำเนินการแก้ไข</small>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>หมายเหตุ:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>คำขอจะถูกเปลี่ยนสถานะเป็น "ส่งกลับแก้ไข"</li>
+                            <li>ผู้ยื่นคำขอสามารถแก้ไขข้อมูลและส่งขึ้นมาใหม่ได้</li>
+                            <li>จะมีการบันทึกประวัติการส่งกลับในระบบ</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-counterclockwise"></i> ยืนยันส่งกลับ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Send Back Modal -->
+<div class="modal fade" id="bulkSendBackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise"></i> ส่งกลับแก้ไขที่เลือก</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="bulk-send-back-form" action="{% url 'approvals:bulk_send_back_for_revision' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i>
+                        คุณกำลังส่งกลับ <strong><span id="bulk-send-back-count">0</span></strong> รายการ
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>เหตุผลในการส่งกลับ</strong> <span class="text-danger">*</span></label>
+                        <select class="form-select mb-2" id="bulk-send-back-reason-select">
+                            <option value="">-- เลือกเหตุผล --</option>
+                            <option value="ต้องการแก้ไขรูปภาพ">ต้องการแก้ไขรูปภาพ</option>
+                            <option value="ต้องการแก้ไขชื่อ-นามสกุล">ต้องการแก้ไขชื่อ-นามสกุล</option>
+                            <option value="ต้องการแก้ไขตำแหน่ง">ต้องการแก้ไขตำแหน่ง</option>
+                            <option value="ต้องการแก้ไขโซน">ต้องการแก้ไขโซน</option>
+                            <option value="อื่นๆ">อื่นๆ (ระบุด้านล่าง)</option>
+                        </select>
+                        <textarea class="form-control" name="rejection_reason" id="bulk-send-back-reason-text" rows="3" placeholder="ระบุเหตุผลเพิ่มเติม (ถ้ามี)" required></textarea>
+                        <small class="form-text text-muted">เหตุผลนี้จะถูกใช้สำหรับทุกรายการที่เลือก</small>
+                    </div>
+
+                    <div class="alert alert-danger">
+                        <strong>คำเตือน:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>รายการที่เลือกจะถูกเปลี่ยนสถานะเป็น "ส่งกลับแก้ไข" ทั้งหมด</li>
+                            <li>ผู้ยื่นคำขอสามารถแก้ไขและส่งขึ้นมาใหม่ได้</li>
+                            <li>ระบบจะข้ามรายการที่สร้างบัตรไปแล้ว</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-arrow-counterclockwise"></i> ยืนยันส่งกลับทั้งหมด
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -352,6 +462,16 @@ function filterByDepartment(departmentId) {
                 console.log('Restored active tab (approved list):', savedTab);
             }
         }
+    }
+
+    // Shared helper function for getting selected IDs
+    function getSelectedIds() {
+        const selectedCheckboxes = document.querySelectorAll('.approved-checkbox:checked');
+        const ids = [];
+        selectedCheckboxes.forEach(function(checkbox) {
+            ids.push(checkbox.value);
+        });
+        return ids;
     }
 
     // Bulk Actions
@@ -501,15 +621,6 @@ function filterByDepartment(departmentId) {
             }
         }
 
-        function getSelectedIds() {
-            const selectedCheckboxes = document.querySelectorAll('.approved-checkbox:checked');
-            const ids = [];
-            selectedCheckboxes.forEach(function(checkbox) {
-                ids.push(checkbox.value);
-            });
-            return ids;
-        }
-
         // Handle form submission - disable button to prevent double submit
         const createBadgeForm = document.getElementById('bulk-create-badge-form');
         if (createBadgeForm) {
@@ -522,6 +633,159 @@ function filterByDepartment(departmentId) {
             });
         }
     }
+
+    // Send Back for Revision functionality
+    function initSendBack() {
+        const sendBackButtons = document.querySelectorAll('.send-back-btn');
+        const sendBackModal = document.getElementById('sendBackModal');
+        const sendBackForm = document.getElementById('send-back-form');
+        const sendBackStaffName = document.getElementById('send-back-staff-name');
+        const sendBackReasonSelect = document.getElementById('send-back-reason-select');
+        const sendBackReasonText = document.getElementById('send-back-reason-text');
+
+        sendBackButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const requestId = this.getAttribute('data-request-id');
+                const staffName = this.getAttribute('data-staff-name');
+                const sendBackUrl = this.getAttribute('data-send-back-url');
+
+                // Set staff name in modal
+                sendBackStaffName.textContent = staffName;
+
+                // Set form action from data attribute
+                sendBackForm.action = sendBackUrl;
+
+                // Clear previous values
+                sendBackReasonSelect.value = '';
+                sendBackReasonText.value = '';
+
+                // Show modal
+                const modal = new bootstrap.Modal(sendBackModal);
+                modal.show();
+            });
+        });
+
+        // When selecting a reason from dropdown, auto-fill textarea
+        if (sendBackReasonSelect) {
+            sendBackReasonSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                if (selectedValue && selectedValue !== 'อื่นๆ') {
+                    sendBackReasonText.value = selectedValue;
+                } else if (selectedValue === 'อื่นๆ') {
+                    sendBackReasonText.value = '';
+                    sendBackReasonText.focus();
+                }
+            });
+        }
+
+        // Handle form submission
+        if (sendBackForm) {
+            sendBackForm.addEventListener('submit', function(e) {
+                const reason = sendBackReasonText.value.trim();
+                if (!reason) {
+                    e.preventDefault();
+                    alert('กรุณาระบุเหตุผลในการส่งกลับ');
+                    return false;
+                }
+
+                // Disable submit button to prevent double submit
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังส่งกลับ...';
+                }
+            });
+        }
+    }
+
+    // Initialize send back functionality
+    initSendBack();
+
+    // Bulk Send Back functionality
+    function initBulkSendBack() {
+        const bulkSendBackBtn = document.getElementById('bulkSendBackBtn');
+        const bulkSendBackModal = document.getElementById('bulkSendBackModal');
+        const bulkSendBackForm = document.getElementById('bulk-send-back-form');
+        const bulkSendBackCount = document.getElementById('bulk-send-back-count');
+        const bulkSendBackReasonSelect = document.getElementById('bulk-send-back-reason-select');
+        const bulkSendBackReasonText = document.getElementById('bulk-send-back-reason-text');
+
+        if (bulkSendBackBtn) {
+            bulkSendBackBtn.addEventListener('click', function() {
+                const selectedIds = getSelectedIds();
+                if (selectedIds.length === 0) {
+                    alert('กรุณาเลือกรายการที่ต้องการส่งกลับ');
+                    return;
+                }
+
+                // Update count in modal
+                if (bulkSendBackCount) {
+                    bulkSendBackCount.textContent = selectedIds.length;
+                }
+
+                // Clear previous values
+                bulkSendBackReasonSelect.value = '';
+                bulkSendBackReasonText.value = '';
+
+                // Add hidden inputs to form
+                if (bulkSendBackForm) {
+                    // Clear previous hidden inputs
+                    const oldInputs = bulkSendBackForm.querySelectorAll('input[name="request_ids"]');
+                    oldInputs.forEach(function(input) {
+                        input.remove();
+                    });
+
+                    // Add new hidden inputs
+                    selectedIds.forEach(function(id) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'request_ids';
+                        input.value = id;
+                        bulkSendBackForm.appendChild(input);
+                    });
+                }
+
+                // Show modal
+                const modal = new bootstrap.Modal(bulkSendBackModal);
+                modal.show();
+            });
+        }
+
+        // When selecting a reason from dropdown, auto-fill textarea
+        if (bulkSendBackReasonSelect) {
+            bulkSendBackReasonSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                if (selectedValue && selectedValue !== 'อื่นๆ') {
+                    bulkSendBackReasonText.value = selectedValue;
+                } else if (selectedValue === 'อื่นๆ') {
+                    bulkSendBackReasonText.value = '';
+                    bulkSendBackReasonText.focus();
+                }
+            });
+        }
+
+        // Handle form submission
+        if (bulkSendBackForm) {
+            bulkSendBackForm.addEventListener('submit', function(e) {
+                const reason = bulkSendBackReasonText.value.trim();
+                if (!reason) {
+                    e.preventDefault();
+                    alert('กรุณาระบุเหตุผลในการส่งกลับ');
+                    return false;
+                }
+
+                // Disable submit button to prevent double submit
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังส่งกลับ...';
+                }
+            });
+        }
+    }
+
+    // Initialize bulk send back functionality
+    initBulkSendBack();
 })();
 </script>
 {% endblock %}

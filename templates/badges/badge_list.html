@@ -57,6 +57,18 @@
         </div>
     </div>
 
+    <!-- Select All Checkbox -->
+    <div class="row mb-2">
+        <div class="col-12">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="select-all-badges">
+                <label class="form-check-label fw-bold" for="select-all-badges">
+                    <i class="bi bi-check-square"></i> เลือกทั้งหมดในแท็บนี้
+                </label>
+            </div>
+        </div>
+    </div>
+
     <!-- Search, Filter and Bulk Actions -->
     <div class="row mb-4">
         <div class="col-md-8">
@@ -304,6 +316,7 @@
         initTabMemory();
         restoreActiveTab();
         initBulkActions();
+        initSelectAll();
     }
 
     // Tab Memory with localStorage
@@ -447,6 +460,50 @@
             bulkResetBtn.style.display = 'none';
             bulkDeleteBtn.style.display = 'none';
         }
+    }
+
+    // Select All functionality
+    function initSelectAll() {
+        const selectAllCheckbox = document.getElementById('select-all-badges');
+        if (!selectAllCheckbox) return;
+
+        selectAllCheckbox.addEventListener('change', function() {
+            // Get active tab
+            const activeTab = document.querySelector('.tab-pane.active');
+            if (!activeTab) return;
+
+            // Select/deselect all checkboxes in active tab
+            const checkboxes = activeTab.querySelectorAll('.badge-checkbox');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+
+            // Update bulk action buttons
+            updateBulkActions();
+        });
+
+        // Listen to tab changes - reset select-all when switching tabs
+        document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function() {
+                selectAllCheckbox.checked = false;
+                updateBulkActions();
+            });
+        });
+
+        // Listen to individual checkbox changes to update "select all" state
+        document.querySelectorAll('.badge-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                // Check if all visible checkboxes in active tab are selected
+                const activeTab = document.querySelector('.tab-pane.active');
+                if (!activeTab) return;
+
+                const visibleCheckboxes = activeTab.querySelectorAll('.badge-checkbox');
+                const checkedCheckboxes = activeTab.querySelectorAll('.badge-checkbox:checked');
+
+                // Update select-all checkbox state
+                selectAllCheckbox.checked = (visibleCheckboxes.length > 0 && visibleCheckboxes.length === checkedCheckboxes.length);
+            });
+        });
     }
 })();
 </script>

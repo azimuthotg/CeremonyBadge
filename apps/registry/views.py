@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
-from PIL import Image
+from PIL import Image, ImageOps
 import os
 from django.conf import settings
 from functools import wraps
@@ -315,6 +315,9 @@ def wizard_step2(request, staff_id):
                     # เปิดรูปต้นฉบับ (ตอนนี้มี path แล้ว)
                     original_image = Image.open(photo.original_photo.path)
 
+                    # แก้ไข orientation ตาม EXIF (แก้ปัญหารูปเอียง)
+                    original_image = ImageOps.exif_transpose(original_image)
+
                     # Crop ตามพิกัดที่กำหนด
                     cropped_image = original_image.crop((
                         int(float(crop_x)),
@@ -395,20 +398,12 @@ def wizard_step3(request, staff_id):
         messages.error(request, 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้')
         return redirect('registry:staff_list')
 
-    # Get photo (ถ้าต้องการ)
+    # Get photo (ถ้ามี) - ไม่ validate แล้ว, ทุกบัตรไม่จำเป็นต้องมีรูป
     photo = None
-    if staff_profile.badge_type.requires_photo:
-        try:
-            photo = Photo.objects.get(staff_profile=staff_profile)
-        except Photo.DoesNotExist:
-            request.session['validation_error'] = {
-                'title': 'ไม่สามารถดำเนินการต่อได้',
-                'message': 'ยังไม่ได้อัปโหลดรูปถ่าย',
-                'details': 'กรุณาอัปโหลดและครอปรูปถ่ายก่อนดำเนินการต่อ',
-                'action_url': f'/registry/wizard/step2/{staff_id}/',
-                'action_text': 'อัปโหลดรูป'
-            }
-            return redirect('registry:wizard_step2', staff_id=staff_id)
+    try:
+        photo = Photo.objects.get(staff_profile=staff_profile)
+    except Photo.DoesNotExist:
+        pass  # No photo is OK for all badge types now
 
     # Get or create badge request
     badge_request, created = BadgeRequest.objects.get_or_create(
@@ -492,11 +487,8 @@ def wizard_submit(request, request_id):
         return redirect('registry:staff_list')
 
     # Check if ready to submit
-    allowed_statuses = ['ready_to_submit', 'rejected', 'photo_uploaded']
-
-    # For badge types that don't require photo (yellow/green), allow draft status
-    if not badge_request.staff_profile.badge_type.requires_photo:
-        allowed_statuses.append('draft')
+    # Allow draft for all badge types since photo is no longer required
+    allowed_statuses = ['ready_to_submit', 'rejected', 'photo_uploaded', 'draft']
 
     if badge_request.status not in allowed_statuses:
         messages.warning(request, 'คำขอนี้ไม่สามารถส่งได้ในสถานะปัจจุบัน')
@@ -665,18 +657,8 @@ def bulk_submit(request):
                 error_messages.append(f'{staff_profile.full_name}: สถานะไม่เหมาะสม ({badge_request.get_status_display()})')
                 continue
 
-            # Check if photo exists (เฉพาะบัตรที่ต้องการรูป)
-            if staff_profile.badge_type.requires_photo:
-                try:
-                    photo = Photo.objects.get(staff_profile=staff_profile)
-                    if not photo.cropped_photo:
-                        error_count += 1
-                        error_messages.append(f'{staff_profile.full_name}: ยังไม่มีรูปถ่าย')
-                        continue
-                except Photo.DoesNotExist:
-                    error_count += 1
-                    error_messages.append(f'{staff_profile.full_name}: ยังไม่มีรูปถ่าย')
-                    continue
+            # Note: Photo validation removed - all badge types can be submitted without photo
+            # เอาการตรวจสอบรูปภาพออก - ทุกสีบัตรไม่ต้องมีรูปก็ส่งคำขอได้
 
             # Check if zone exists
             if not staff_profile.zone:
