@@ -1465,3 +1465,615 @@ def duplicate_check_view(request):
     }
 
     return render(request, 'reports/duplicate_check.html', context)
+
+
+@login_required
+def department_detailed_report_pdf(request, department_id):
+    """
+    รายงาน PDF รายละเอียดหน่วยงาน
+    แสดงสถิติบัตรแต่ละสี และรายการบัตรทั้งหมดเรียงตามเลขบัตร
+    """
+    from django.http import HttpResponse
+    from weasyprint import HTML, CSS
+    from django.template.loader import render_to_string
+    from django.db.models import Case, When, IntegerField, Count
+    from django.conf import settings
+    import os
+
+    # ตรวจสอบสิทธิ์
+    if not request.user.can_manage_all():
+        return render(request, '403.html', status=403)
+
+    # ดึงข้อมูลหน่วยงาน
+    try:
+        department = Department.objects.get(id=department_id, is_active=True)
+    except Department.DoesNotExist:
+        return HttpResponse('ไม่พบหน่วยงาน', status=404)
+
+    # เรียง BadgeType ตามมาตรฐาน: ชมพู → แดง → เหลือง → เขียว
+    badge_types_ordered = BadgeType.objects.filter(is_active=True).annotate(
+        color_sort=Case(
+            When(color='pink', then=1),
+            When(color='red', then=2),
+            When(color='yellow', then=3),
+            When(color='green', then=4),
+            output_field=IntegerField(),
+        )
+    ).order_by('color_sort')
+
+    # นับจำนวนแต่ละประเภทบัตร
+    badge_type_stats = []
+    total_badges = 0
+
+    for badge_type in badge_types_ordered:
+        count = Badge.objects.filter(
+            staff_profile__department=department,
+            badge_type=badge_type,
+            is_active=True
+        ).count()
+
+        printed_count = Badge.objects.filter(
+            staff_profile__department=department,
+            badge_type=badge_type,
+            is_active=True,
+            is_printed=True
+        ).count()
+
+        if count > 0:
+            badge_type_stats.append({
+                'badge_type': badge_type,
+                'count': count,
+                'printed_count': printed_count,
+                'not_printed_count': count - printed_count,
+            })
+            total_badges += count
+
+    # ดึงรายการบัตรทั้งหมดเรียงตามเลขบัตร
+    badges_list = Badge.objects.filter(
+        staff_profile__department=department,
+        is_active=True
+    ).select_related(
+        'staff_profile',
+        'badge_type',
+        'staff_profile__zone'
+    ).order_by('badge_number')
+
+    # สร้าง context สำหรับ template
+    context = {
+        'department': department,
+        'badge_type_stats': badge_type_stats,
+        'total_badges': total_badges,
+        'badges_list': badges_list,
+        'generated_date': timezone.now(),
+    }
+
+    # Render HTML template
+    html_string = render_to_string('reports/department_detailed_report_pdf.html', context)
+
+    # สร้าง PDF
+    from weasyprint.text.fonts import FontConfiguration
+
+    # Font configuration for Thai fonts
+    font_config = FontConfiguration()
+
+    # Path to Thai font
+    font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'THSarabunNew.ttf')
+    font_bold_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'THSarabunNew Bold.ttf')
+
+    # CSS with embedded font
+    css_string = f'''
+        @font-face {{
+            font-family: 'THSarabunNew';
+            src: url('file://{font_path}') format('truetype');
+            font-weight: normal;
+        }}
+        @font-face {{
+            font-family: 'THSarabunNew';
+            src: url('file://{font_bold_path}') format('truetype');
+            font-weight: bold;
+        }}
+        @page {{
+            size: A4;
+            margin: 1.5cm 1cm;
+        }}
+        * {{
+            font-family: 'THSarabunNew', 'DejaVu Sans', sans-serif;
+        }}
+        body {{
+            font-size: 14pt;
+            line-height: 1.4;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 0.5cm;
+            border-bottom: 2px solid #333;
+            padding-bottom: 0.3cm;
+        }}
+        h1 {{
+            font-size: 20pt;
+            font-weight: bold;
+            margin: 0.2cm 0;
+        }}
+        h2 {{
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 0.2cm 0;
+        }}
+        .meta {{
+            font-size: 12pt;
+            color: #666;
+            margin-top: 0.2cm;
+        }}
+        .summary {{
+            margin: 0.5cm 0;
+            padding: 0.3cm;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }}
+        .summary-grid {{
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.3cm;
+            margin-top: 0.3cm;
+        }}
+        .summary-item {{
+            text-align: center;
+            padding: 0.3cm;
+            background-color: white;
+            border-radius: 4px;
+            border: 2px solid;
+        }}
+        .summary-item h3 {{
+            font-size: 24pt;
+            font-weight: bold;
+            margin: 0.1cm 0;
+        }}
+        .summary-item p {{
+            font-size: 12pt;
+            margin: 0;
+            color: #666;
+        }}
+        .badge-pink {{ border-color: #FFC0CB; background-color: #FFF0F5; }}
+        .badge-red {{ border-color: #FF6B6B; background-color: #FFE5E5; }}
+        .badge-yellow {{ border-color: #FFD93D; background-color: #FFFBEA; }}
+        .badge-green {{ border-color: #6BCF7F; background-color: #E8F8EA; }}
+
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5cm;
+            font-size: 13pt;
+        }}
+        th, td {{
+            border: 1px solid #000;
+            padding: 0.15cm 0.2cm;
+            text-align: left;
+        }}
+        th {{
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }}
+        .text-center {{
+            text-align: center;
+        }}
+        .status-printed {{
+            color: #10B981;
+            font-weight: bold;
+        }}
+        .status-not-printed {{
+            color: #F59E0B;
+        }}
+    '''
+
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf_file = html.write_pdf(
+        stylesheets=[CSS(string=css_string, font_config=font_config)],
+        font_config=font_config
+    )
+
+    # Return PDF
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="department_report_{department.name}.pdf"'
+
+    return response
+
+
+@login_required
+def department_badge_type_report_pdf(request, department_id, badge_type_id):
+    """
+    รายงาน PDF แยกตามสีบัตรของแต่ละหน่วยงาน
+    เช่น บัตรแดงของมหาวิทยาลัยนครพนม
+    """
+    from django.http import HttpResponse
+    from weasyprint import HTML, CSS
+    from django.template.loader import render_to_string
+    from django.conf import settings
+    import os
+
+    # ตรวจสอบสิทธิ์
+    if not request.user.can_manage_all():
+        return render(request, '403.html', status=403)
+
+    # ดึงข้อมูลหน่วยงาน
+    try:
+        department = Department.objects.get(id=department_id, is_active=True)
+    except Department.DoesNotExist:
+        return HttpResponse('ไม่พบหน่วยงาน', status=404)
+
+    # ดึงข้อมูลประเภทบัตร
+    try:
+        badge_type = BadgeType.objects.get(id=badge_type_id, is_active=True)
+    except BadgeType.DoesNotExist:
+        return HttpResponse('ไม่พบประเภทบัตร', status=404)
+
+    # นับจำนวนบัตรประเภทนี้
+    total_count = Badge.objects.filter(
+        staff_profile__department=department,
+        badge_type=badge_type,
+        is_active=True
+    ).count()
+
+    printed_count = Badge.objects.filter(
+        staff_profile__department=department,
+        badge_type=badge_type,
+        is_active=True,
+        is_printed=True
+    ).count()
+
+    not_printed_count = total_count - printed_count
+
+    # ดึงรายการบัตรเรียงตามเลขบัตร
+    badges_list = Badge.objects.filter(
+        staff_profile__department=department,
+        badge_type=badge_type,
+        is_active=True
+    ).select_related(
+        'staff_profile',
+        'staff_profile__zone'
+    ).order_by('badge_number')
+
+    # สร้าง context
+    context = {
+        'department': department,
+        'badge_type': badge_type,
+        'total_count': total_count,
+        'printed_count': printed_count,
+        'not_printed_count': not_printed_count,
+        'badges_list': badges_list,
+        'generated_date': timezone.now(),
+    }
+
+    # Render HTML template
+    html_string = render_to_string('reports/department_badge_type_report_pdf.html', context)
+
+    # สร้าง PDF
+    from weasyprint.text.fonts import FontConfiguration
+
+    font_config = FontConfiguration()
+    font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'THSarabunNew.ttf')
+    font_bold_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'THSarabunNew Bold.ttf')
+
+    # กำหนดสีตามประเภทบัตร
+    color_map = {
+        'pink': '#FFC0CB',
+        'red': '#FF6B6B',
+        'yellow': '#FFD93D',
+        'green': '#6BCF7F'
+    }
+    badge_color = color_map.get(badge_type.color, '#999999')
+
+    css_string = f'''
+        @font-face {{
+            font-family: 'THSarabunNew';
+            src: url('file://{font_path}') format('truetype');
+            font-weight: normal;
+        }}
+        @font-face {{
+            font-family: 'THSarabunNew';
+            src: url('file://{font_bold_path}') format('truetype');
+            font-weight: bold;
+        }}
+        @page {{
+            size: A4;
+            margin: 1.5cm 1cm;
+        }}
+        * {{
+            font-family: 'THSarabunNew', 'DejaVu Sans', sans-serif;
+        }}
+        body {{
+            font-size: 14pt;
+            line-height: 1.4;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 0.5cm;
+            border-bottom: 3px solid {badge_color};
+            padding-bottom: 0.3cm;
+        }}
+        h1 {{
+            font-size: 22pt;
+            font-weight: bold;
+            margin: 0.2cm 0;
+            color: {badge_color};
+        }}
+        h2 {{
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 0.2cm 0;
+        }}
+        .meta {{
+            font-size: 12pt;
+            color: #666;
+        }}
+        .summary {{
+            margin: 0.5cm 0;
+            padding: 0.5cm;
+            background-color: {badge_color}20;
+            border: 2px solid {badge_color};
+            border-radius: 8px;
+        }}
+        .summary-row {{
+            display: flex;
+            justify-content: space-around;
+            margin: 0.3cm 0;
+        }}
+        .summary-item {{
+            text-align: center;
+        }}
+        .summary-item h3 {{
+            font-size: 28pt;
+            font-weight: bold;
+            margin: 0;
+            color: {badge_color};
+        }}
+        .summary-item p {{
+            font-size: 13pt;
+            margin: 0.1cm 0;
+            color: #333;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5cm;
+            font-size: 13pt;
+        }}
+        th, td {{
+            border: 1px solid #000;
+            padding: 0.2cm;
+            text-align: left;
+        }}
+        th {{
+            background-color: {badge_color};
+            color: #000;
+            font-weight: bold;
+            text-align: center;
+        }}
+        .text-center {{
+            text-align: center;
+        }}
+        .status-printed {{
+            color: #10B981;
+            font-weight: bold;
+        }}
+        .status-not-printed {{
+            color: #F59E0B;
+        }}
+        .footer {{
+            margin-top: 0.8cm;
+            padding-top: 0.3cm;
+            border-top: 1px solid #ccc;
+            text-align: center;
+            font-size: 11pt;
+            color: #666;
+        }}
+    '''
+
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf_file = html.write_pdf(
+        stylesheets=[CSS(string=css_string, font_config=font_config)],
+        font_config=font_config
+    )
+
+    # สร้างชื่อไฟล์ที่สื่อความหมาย
+    filename = f"{badge_type.name}_{department.name}.pdf"
+
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+    return response
+
+
+@login_required
+def department_staff_export_excel(request, department_id):
+    """
+    Export Excel รายชื่อบุคลากรตามหน่วยงาน
+    ตามฟอร์แมตที่ทหารต้องการ (10 คอลัมน์)
+    """
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    # ตรวจสอบสิทธิ์
+    if not request.user.can_manage_all():
+        return render(request, '403.html', status=403)
+
+    # ดึงข้อมูลหน่วยงาน
+    try:
+        department = Department.objects.get(id=department_id, is_active=True)
+    except Department.DoesNotExist:
+        return HttpResponse('ไม่พบหน่วยงาน', status=404)
+
+    # ดึงข้อมูลบุคลากรทั้งหมดในหน่วยงาน
+    staff_list = StaffProfile.objects.filter(
+        department=department
+    ).select_related(
+        'department',
+        'badge_type',
+        'zone',
+        'badge'
+    ).order_by('last_line', 'first_line')
+
+    # สร้าง Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "รายชื่อบุคลากร"
+
+    # สไตล์สำหรับหัวตาราง
+    header_font = Font(name='TH SarabunPSK', size=14, bold=True)
+    header_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
+    header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+    # สไตล์สำหรับข้อมูล
+    data_font = Font(name='TH SarabunPSK', size=14)
+    data_alignment_center = Alignment(horizontal='center', vertical='center')
+    data_alignment_left = Alignment(horizontal='left', vertical='center')
+
+    # เส้นขอบ
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # หัวตาราง (12 คอลัมน์)
+    headers = [
+        'ลำดับ',
+        'ยศ - ชื่อ ยศ',
+        'บัตรประชาชน 13 หลัก',
+        'หน่วยงาน',
+        'ประเภทบคคล',
+        'ประเภทบัตร',
+        'เลขที่บัตร',
+        'บทบาทหน้าที่',
+        'อายุ',
+        'ฉาย',
+        'พะเบียนรถ',
+        'เบอร์โทรศัพท์มือถือ'
+    ]
+
+    # เขียนหัวตาราง
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+
+    # ตั้งค่าความกว้างคอลัมน์
+    column_widths = [8, 30, 18, 35, 25, 20, 15, 25, 8, 15, 15, 18]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    # เขียนข้อมูล
+    row_num = 2
+    for idx, staff in enumerate(staff_list, 1):
+        # 1. ลำดับ
+        cell = ws.cell(row=row_num, column=1)
+        cell.value = idx
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+
+        # 2. ยศ - ชื่อ ยศ
+        cell = ws.cell(row=row_num, column=2)
+        cell.value = staff.full_name
+        cell.font = data_font
+        cell.alignment = data_alignment_left
+        cell.border = thin_border
+
+        # 3. บัตรประชาชน 13 หลัก
+        cell = ws.cell(row=row_num, column=3)
+        cell.value = staff.national_id if staff.national_id else ''
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+        # Format เป็นข้อความเพื่อไม่ให้เป็นเลข
+        cell.number_format = '@'
+
+        # 4. หน่วยงาน
+        cell = ws.cell(row=row_num, column=4)
+        cell.value = staff.department.name
+        cell.font = data_font
+        cell.alignment = data_alignment_left
+        cell.border = thin_border
+
+        # 5. ประเภทบคคล
+        cell = ws.cell(row=row_num, column=5)
+        cell.value = staff.person_type if staff.person_type else ''
+        cell.font = data_font
+        cell.alignment = data_alignment_left
+        cell.border = thin_border
+
+        # 6. ประเภทบัตร
+        cell = ws.cell(row=row_num, column=6)
+        cell.value = staff.badge_type.name if staff.badge_type else ''
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+
+        # 7. เลขที่บัตร
+        cell = ws.cell(row=row_num, column=7)
+        if hasattr(staff, 'badge') and staff.badge:
+            cell.value = staff.badge.badge_number
+        else:
+            cell.value = ''
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+
+        # 8. บทบาทหน้าที่
+        cell = ws.cell(row=row_num, column=8)
+        cell.value = staff.position
+        cell.font = data_font
+        cell.alignment = data_alignment_left
+        cell.border = thin_border
+
+        # 9. อายุ
+        cell = ws.cell(row=row_num, column=9)
+        cell.value = staff.age if staff.age else ''
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+
+        # 10. ฉาย (โซน)
+        cell = ws.cell(row=row_num, column=10)
+        cell.value = staff.zone.code if staff.zone else ''
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+
+        # 11. พะเบียนรถ
+        cell = ws.cell(row=row_num, column=11)
+        cell.value = staff.vehicle_registration if staff.vehicle_registration else ''
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+
+        # 12. เบอร์โทรศัพท์มือถือ
+        cell = ws.cell(row=row_num, column=12)
+        cell.value = staff.phone if staff.phone else ''
+        cell.font = data_font
+        cell.alignment = data_alignment_center
+        cell.border = thin_border
+        cell.number_format = '@'
+
+        row_num += 1
+
+    # Freeze หัวตาราง
+    ws.freeze_panes = 'A2'
+
+    # สร้าง response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f'staff_list_{department.name}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    # บันทึก workbook ลง response
+    wb.save(response)
+
+    return response

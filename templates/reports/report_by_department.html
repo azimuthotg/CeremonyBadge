@@ -89,12 +89,55 @@
                                         <span class="badge bg-warning text-dark">{{ stat.pending }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{% url 'reports:badge_receipt_pdf' stat.department.id %}"
-                                           class="btn btn-sm btn-outline-primary"
-                                           target="_blank"
-                                           title="พิมพ์ใบเซ็นรับบัตร">
-                                            <i class="bi bi-file-pdf"></i>
-                                        </a>
+                                        <div class="btn-group" role="group">
+                                            <!-- Export Excel -->
+                                            <a href="{% url 'reports:department_staff_export_excel' stat.department.id %}"
+                                               class="btn btn-sm btn-outline-success"
+                                               title="Export Excel (รายชื่อบุคลากร)">
+                                                <i class="bi bi-file-earmark-spreadsheet"></i>
+                                            </a>
+
+                                            <!-- รายงานรวม PDF -->
+                                            <a href="{% url 'reports:department_detailed_report_pdf' stat.department.id %}"
+                                               class="btn btn-sm btn-outline-info"
+                                               target="_blank"
+                                               title="รายงานรวมทุกสี (PDF)">
+                                                <i class="bi bi-file-earmark-text"></i>
+                                            </a>
+
+                                            <!-- Dropdown แยกสี -->
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-warning dropdown-toggle"
+                                                        data-bs-toggle="dropdown" aria-expanded="false"
+                                                        title="แยกตามสีบัตร (PDF)">
+                                                    <i class="bi bi-file-earmark-ruled"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    {% for bt in badge_types %}
+                                                    {% with count=stat.badge_counts|get_item:bt.color %}
+                                                    {% if count > 0 %}
+                                                    <li>
+                                                        <a class="dropdown-item"
+                                                           href="{% url 'reports:department_badge_type_report_pdf' stat.department.id bt.id %}"
+                                                           target="_blank">
+                                                            <span class="badge" style="background-color: {{ bt.color_code }}; color: black;">{{ bt.name }}</span>
+                                                            ({{ count }} บัตร)
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% endwith %}
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+
+                                            <!-- ใบเซ็นรับ -->
+                                            <a href="{% url 'reports:badge_receipt_pdf' stat.department.id %}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               target="_blank"
+                                               title="ใบเซ็นรับบัตร (PDF)">
+                                                <i class="bi bi-file-pdf"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}

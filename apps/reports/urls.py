@@ -14,6 +14,9 @@ urlpatterns = [
     path('department/', views.report_by_department, name='report_by_department'),
     path('department/<int:department_id>/badge-receipt/', views.badge_receipt_report_pdf, name='badge_receipt_pdf'),
     path('department/<int:department_id>/printing-status/', views.badge_printing_status_pdf, name='badge_printing_status_pdf'),
+    path('department/<int:department_id>/detailed-report/', views.department_detailed_report_pdf, name='department_detailed_report_pdf'),
+    path('department/<int:department_id>/badge-type/<int:badge_type_id>/report/', views.department_badge_type_report_pdf, name='department_badge_type_report_pdf'),
+    path('department/<int:department_id>/export-excel/', views.department_staff_export_excel, name='department_staff_export_excel'),
 
     # รายงานหน่วยงาน (Submitter)
     path('my-department/', views.submitter_report, name='submitter_report'),

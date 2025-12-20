@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>รายงานหน่วยงาน - {{ department.name }}</title>
+</head>
+<body>
+    <!-- หัวกระดาษ -->
+    <div class="header">
+        <h1>รายงานรายละเอียดบัตร</h1>
+        <h2>{{ department.name }}</h2>
+        <div class="meta">
+            พิมพ์เมื่อ: {{ generated_date|date:"d/m/Y H:i" }} น.
+        </div>
+    </div>
+
+    <!-- สถิติสรุปแต่ละประเภทบัตร -->
+    <div class="summary">
+        <h2 style="margin-top: 0;">สรุปจำนวนบัตรแยกตามประเภท</h2>
+        <div class="summary-grid">
+            {% for stat in badge_type_stats %}
+            <div class="summary-item badge-{{ stat.badge_type.color }}">
+                <p>{{ stat.badge_type.name }}</p>
+                <h3>{{ stat.count }}</h3>
+                <p style="font-size: 11pt;">
+                    พิมพ์: {{ stat.printed_count }} |
+                    ยังไม่: {{ stat.not_printed_count }}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="text-align: center; margin-top: 0.3cm; font-weight: bold; font-size: 16pt;">
+            รวมทั้งหมด: {{ total_badges }} บัตร
+        </div>
+    </div>
+
+    <!-- รายการบัตรทั้งหมด -->
+    <h2 style="margin-top: 0.5cm;">รายการบัตรทั้งหมด (เรียงตามเลขบัตร)</h2>
+
+    {% if badges_list %}
+    <table>
+        <thead>
+            <tr>
+                <th width="8%">ลำดับ</th>
+                <th width="12%">เลขบัตร</th>
+                <th width="30%">ชื่อ-นามสกุล</th>
+                <th width="20%">ประเภทบัตร</th>
+                <th width="10%">โซน</th>
+                <th width="20%">สถานะ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for badge in badges_list %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center"><strong>{{ badge.badge_number }}</strong></td>
+                <td>{{ badge.staff_profile.first_line }} {{ badge.staff_profile.last_line }}</td>
+                <td class="text-center">{{ badge.badge_type.name }}</td>
+                <td class="text-center">
+                    {% if badge.staff_profile.zone %}
+                        {{ badge.staff_profile.zone.code }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if badge.is_printed %}
+                        <span class="status-printed">✓ พิมพ์แล้ว</span>
+                    {% else %}
+                        <span class="status-not-printed">○ ยังไม่พิมพ์</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 1cm; color: #999;">
+        ไม่มีข้อมูลบัตรในหน่วยงานนี้
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div style="margin-top: 1cm; padding-top: 0.3cm; border-top: 1px solid #ccc; text-align: center; font-size: 11pt; color: #666;">
+        รายงานนี้สร้างโดยระบบบัตรงานพิธีพระราชทานปริญญาบัตร มหาวิทยาลัยนครพนม
+    </div>
+</body>
+</html>
