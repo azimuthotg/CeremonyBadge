@@ -597,6 +597,12 @@ def edit_badge(request, badge_id):
         new_badge_type_id = request.POST.get('badge_type')
         revision_reason = request.POST.get('revision_reason', '').strip()
 
+        # Get additional fields (ข้อมูลส่วนตัว)
+        national_id = request.POST.get('national_id', '').strip()
+        position = request.POST.get('position', '').strip()
+        age = request.POST.get('age', '').strip()
+        vehicle_registration = request.POST.get('vehicle_registration', '').strip()
+
         # Validate
         if not first_line or not last_line:
             messages.error(request, 'กรุณากรอกยศชื่อและนามสกุล')
@@ -605,6 +611,22 @@ def edit_badge(request, badge_id):
         if not revision_reason:
             messages.error(request, 'กรุณาระบุเหตุผลในการแก้ไข')
             return redirect('badges:edit_badge', badge_id=badge_id)
+
+        # Validate national_id (if provided)
+        if national_id and (len(national_id) != 13 or not national_id.isdigit()):
+            messages.error(request, 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก')
+            return redirect('badges:edit_badge', badge_id=badge_id)
+
+        # Validate age (if provided)
+        if age:
+            try:
+                age_int = int(age)
+                if age_int < 0 or age_int > 150:
+                    messages.error(request, 'อายุต้องอยู่ระหว่าง 0-150 ปี')
+                    return redirect('badges:edit_badge', badge_id=badge_id)
+            except ValueError:
+                messages.error(request, 'อายุต้องเป็นตัวเลขเท่านั้น')
+                return redirect('badges:edit_badge', badge_id=badge_id)
 
         # Check if badge type changed (color change)
         color_changed = False
@@ -622,6 +644,12 @@ def edit_badge(request, badge_id):
             old_display_name = staff_profile.display_name
             old_zone = staff_profile.zone
             old_department = staff_profile.department
+
+            # เก็บค่าเดิมของฟิลด์ข้อมูลส่วนตัว
+            old_national_id = staff_profile.national_id
+            old_position = staff_profile.position
+            old_age = staff_profile.age
+            old_vehicle_registration = staff_profile.vehicle_registration
 
             # Update staff profile - ชื่อ-นามสกุลจริงในระบบ
             staff_profile.first_line = first_line
@@ -642,6 +670,12 @@ def edit_badge(request, badge_id):
             if department_id:
                 staff_profile.department_id = department_id
 
+            # อัปเดตข้อมูลส่วนตัว (ไม่แสดงบนบัตร แต่ปรากฏในรายงาน)
+            staff_profile.national_id = national_id if national_id else None
+            staff_profile.position = position
+            staff_profile.age = int(age) if age else None
+            staff_profile.vehicle_registration = vehicle_registration if vehicle_registration else None
+
             # If color changed, update badge type in staff profile
             if color_changed:
                 staff_profile.badge_type = new_badge_type
@@ -655,6 +689,13 @@ def edit_badge(request, badge_id):
             display_changed = (old_display_name != staff_profile.display_name)
             zone_changed = (old_zone != staff_profile.zone)
             department_changed = (old_department != staff_profile.department)
+
+            # ตรวจสอบการเปลี่ยนแปลงของข้อมูลส่วนตัว (ไม่แสดงบนบัตร)
+            national_id_changed = (old_national_id != staff_profile.national_id)
+            position_changed = (old_position != staff_profile.position)
+            age_changed = (old_age != staff_profile.age)
+            vehicle_changed = (old_vehicle_registration != staff_profile.vehicle_registration)
+
             needs_regenerate = first_line_changed or last_line_changed or display_changed or zone_changed
 
             # Reload staff_profile to ensure we have the latest data
@@ -767,6 +808,16 @@ def edit_badge(request, badge_id):
                 if department_changed:
                     changes.append(f'หน่วยงาน: {old_department.name} → {staff_profile.department.name}')
 
+                # บันทึกการเปลี่ยนแปลงของข้อมูลส่วนตัว (ไม่แสดงบนบัตร แต่ปรากฏในรายงาน)
+                if national_id_changed:
+                    changes.append(f'เลขบัตรประชาชน: "{old_national_id or "-"}" → "{staff_profile.national_id or "-"}"')
+                if position_changed:
+                    changes.append(f'ตำแหน่ง: "{old_position}" → "{staff_profile.position}"')
+                if age_changed:
+                    changes.append(f'อายุ: {old_age or "-"} → {staff_profile.age or "-"}')
+                if vehicle_changed:
+                    changes.append(f'ทะเบียนรถ: "{old_vehicle_registration or "-"}" → "{staff_profile.vehicle_registration or "-"}"')
+
                 change_summary = ', '.join(changes) if changes else 'ไม่มีการเปลี่ยนแปลง'
 
                 # Log edit
@@ -783,8 +834,8 @@ def edit_badge(request, badge_id):
                 success_msg = f'แก้ไขบัตรหมายเลข {badge.badge_number} สำเร็จ (ครั้งที่ {badge.revision_count})'
                 if needs_regenerate:
                     success_msg += ' - สร้างบัตรใหม่แล้ว'
-                elif department_changed:
-                    success_msg += ' - อัพเดตหน่วยงานแล้ว (ไม่ต้องพิมพ์บัตรใหม่)'
+                elif department_changed or national_id_changed or position_changed or age_changed or vehicle_changed:
+                    success_msg += ' - อัพเดตข้อมูลในระบบแล้ว (ไม่ต้องพิมพ์บัตรใหม่)'
                 messages.success(request, success_msg)
 
             return redirect('badges:badge_detail', badge_id=badge.id)

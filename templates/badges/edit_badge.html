@@ -124,6 +124,82 @@
                             </div>
                         </div>
 
+                        <!-- Section 3: ข้อมูลส่วนตัว (ไม่แสดงบนบัตร แต่ปรากฏในรายงาน) -->
+                        <div class="alert alert-secondary border-secondary mb-4">
+                            <h6 class="mb-3">
+                                <i class="bi bi-person-vcard"></i>
+                                <strong>ข้อมูลส่วนตัว (ไม่แสดงบนบัตร แต่ปรากฏในรายงาน)</strong>
+                                <span class="badge bg-success">ไม่ต้องพิมพ์บัตรใหม่</span>
+                            </h6>
+                            <p class="small mb-3">
+                                <i class="bi bi-info-circle"></i>
+                                ข้อมูลเหล่านี้ไม่แสดงบนบัตร แต่จะปรากฏในรายงาน (ใบเซ็นรับ, Export Excel)
+                                แก้ไขได้โดยไม่ต้องพิมพ์บัตรใหม่
+                            </p>
+
+                            <!-- เลขบัตรประชาชน -->
+                            <div class="mb-3">
+                                <label for="national_id" class="form-label">
+                                    <i class="bi bi-card-text"></i> เลขบัตรประชาชน
+                                </label>
+                                <input type="text" class="form-control" id="national_id" name="national_id"
+                                       value="{{ staff_profile.national_id|default:'' }}"
+                                       placeholder="1234567890123"
+                                       maxlength="13"
+                                       pattern="[0-9]{13}">
+                                <small class="text-muted">
+                                    เลขบัตรประชาชน 13 หลัก (ตัวเลขเท่านั้น)
+                                    {% if staff_profile.national_id %}
+                                    | ปัจจุบัน: <strong>{{ staff_profile.national_id }}</strong>
+                                    {% endif %}
+                                </small>
+                            </div>
+
+                            <!-- บทบาทหน้าที่/ตำแหน่ง -->
+                            <div class="mb-3">
+                                <label for="position" class="form-label">
+                                    <i class="bi bi-briefcase"></i> ตำแหน่ง/บทบาทหน้าที่
+                                </label>
+                                <input type="text" class="form-control" id="position" name="position"
+                                       value="{{ staff_profile.position }}"
+                                       placeholder="เช่น เจ้าหน้าที่รักษาความปลอดภัย, เจ้าหน้าที่ต้อนรับ">
+                                <small class="text-muted">
+                                    ปัจจุบัน: <strong>{{ staff_profile.position }}</strong>
+                                </small>
+                            </div>
+
+                            <div class="row">
+                                <!-- อายุ -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="age" class="form-label">
+                                        <i class="bi bi-calendar-check"></i> อายุ
+                                    </label>
+                                    <input type="number" class="form-control" id="age" name="age"
+                                           value="{{ staff_profile.age|default:'' }}"
+                                           placeholder="0"
+                                           min="0"
+                                           max="150">
+                                    <small class="text-muted">
+                                        ปัจจุบัน: <strong>{{ staff_profile.age|default:"-" }} {% if staff_profile.age %}ปี{% endif %}</strong>
+                                    </small>
+                                </div>
+
+                                <!-- ทะเบียนรถ -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="vehicle_registration" class="form-label">
+                                        <i class="bi bi-car-front"></i> ทะเบียนรถ
+                                    </label>
+                                    <input type="text" class="form-control" id="vehicle_registration" name="vehicle_registration"
+                                           value="{{ staff_profile.vehicle_registration|default:'' }}"
+                                           placeholder="เช่น กข 1234 กรุงเทพมหานคร"
+                                           maxlength="50">
+                                    <small class="text-muted">
+                                        ปัจจุบัน: <strong>{{ staff_profile.vehicle_registration|default:"-" }}</strong>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Zone -->
                         <div class="mb-3">
                             <label for="zone" class="form-label">
@@ -285,9 +361,11 @@
                 <div class="card-body">
                     <h6 class="text-success mb-2">✅ แก้ไขโดยไม่ต้องพิมพ์บัตรใหม่:</h6>
                     <ul class="mb-3">
+                        <li><strong>ข้อมูลส่วนตัว:</strong> เลขบัตรประชาชน, ตำแหน่ง, อายุ, ทะเบียนรถ</li>
                         <li><strong>เปลี่ยนหน่วยงาน</strong> - อัพเดตข้อมูลในระบบเท่านั้น</li>
+                        <li>ข้อมูลเหล่านี้ <strong>ไม่แสดงบนบัตร</strong> แต่ปรากฏในรายงาน</li>
                         <li>หมายเลขบัตร <strong>ไม่เปลี่ยน</strong></li>
-                        <li>ไม่ต้องพิมพ์บัตรใหม่ (เพราะบัตรไม่แสดงชื่อหน่วยงาน)</li>
+                        <li>ไม่ต้องพิมพ์บัตรใหม่</li>
                     </ul>
 
                     <h6 class="text-warning mb-2">⚠️ แก้ไขข้อมูลบนบัตร (ต้องพิมพ์บัตรใหม่):</h6>
@@ -428,6 +506,34 @@ document.getElementById('editBadgeForm').addEventListener('submit', function(e) 
             e.preventDefault();
             return false;
         }
+    }
+});
+
+// Validate national ID - ตัวเลข 13 หลักเท่านั้น
+document.getElementById('national_id').addEventListener('input', function(e) {
+    const value = e.target.value;
+    // Allow only digits
+    e.target.value = value.replace(/[^0-9]/g, '');
+
+    // Check length
+    if (e.target.value.length > 0 && e.target.value.length !== 13) {
+        e.target.setCustomValidity('เลขบัตรประชาชนต้องเป็น 13 หลัก');
+        e.target.classList.add('is-invalid');
+    } else {
+        e.target.setCustomValidity('');
+        e.target.classList.remove('is-invalid');
+    }
+});
+
+// Validate age - 0-150 ปี
+document.getElementById('age').addEventListener('input', function(e) {
+    const value = parseInt(e.target.value);
+    if (e.target.value && (isNaN(value) || value < 0 || value > 150)) {
+        e.target.setCustomValidity('อายุต้องอยู่ระหว่าง 0-150 ปี');
+        e.target.classList.add('is-invalid');
+    } else {
+        e.target.setCustomValidity('');
+        e.target.classList.remove('is-invalid');
     }
 });
 </script>
