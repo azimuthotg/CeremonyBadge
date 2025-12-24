@@ -133,6 +133,14 @@ class StaffProfile(models.Model):
         verbose_name="ชื่อที่แสดงบนบัตร",
         help_text="ถ้าไม่กรอก จะใช้ชื่อเต็มอัตโนมัติ (ใช้สำหรับย่อชื่อยาว)"
     )
+
+    # บัตรสำรอง (ไม่แสดงชื่อ-สกุลบนบัตร)
+    is_reserve_badge = models.BooleanField(
+        default=False,
+        verbose_name="บัตรสำรอง",
+        help_text="เมื่อเลือก จะไม่แสดงชื่อ-สกุลบนบัตร (เว้นว่าง)"
+    )
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

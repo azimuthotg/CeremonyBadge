@@ -592,6 +592,7 @@ def edit_badge(request, badge_id):
         first_line = request.POST.get('first_line', '').strip()
         last_line = request.POST.get('last_line', '').strip()
         display_name = request.POST.get('display_name', '').strip()
+        is_reserve_badge = request.POST.get('is_reserve_badge') == 'on'  # checkbox
         zone_id = request.POST.get('zone')
         department_id = request.POST.get('department')
         new_badge_type_id = request.POST.get('badge_type')
@@ -642,6 +643,7 @@ def edit_badge(request, badge_id):
             old_first_line = staff_profile.first_line
             old_last_line = staff_profile.last_line
             old_display_name = staff_profile.display_name
+            old_is_reserve_badge = staff_profile.is_reserve_badge
             old_zone = staff_profile.zone
             old_department = staff_profile.department
 
@@ -657,6 +659,9 @@ def edit_badge(request, badge_id):
 
             # อัปเดต display_name ทุกกรณี (รวมค่าว่างด้วย - เพื่อให้กลับไปใช้ชื่อเต็ม)
             staff_profile.display_name = display_name if display_name else None
+
+            # อัปเดต is_reserve_badge (บัตรสำรอง - ไม่แสดงชื่อบนบัตร)
+            staff_profile.is_reserve_badge = is_reserve_badge
 
             # อัปเดต zone เฉพาะเมื่อมีการส่งค่ามา
             # ถ้า zone_id เป็นค่าว่าง ("") ให้เซ็ตเป็น None
@@ -683,10 +688,11 @@ def edit_badge(request, badge_id):
             staff_profile.save()
 
             # ตรวจสอบว่ามีการเปลี่ยนแปลงข้อมูลที่แสดงบนบัตรหรือไม่
-            # (first_line, last_line, display_name หรือ zone - department ไม่แสดงบนบัตร)
+            # (first_line, last_line, display_name, is_reserve_badge หรือ zone - department ไม่แสดงบนบัตร)
             first_line_changed = (old_first_line != staff_profile.first_line)
             last_line_changed = (old_last_line != staff_profile.last_line)
             display_changed = (old_display_name != staff_profile.display_name)
+            reserve_badge_changed = (old_is_reserve_badge != staff_profile.is_reserve_badge)
             zone_changed = (old_zone != staff_profile.zone)
             department_changed = (old_department != staff_profile.department)
 
@@ -696,7 +702,7 @@ def edit_badge(request, badge_id):
             age_changed = (old_age != staff_profile.age)
             vehicle_changed = (old_vehicle_registration != staff_profile.vehicle_registration)
 
-            needs_regenerate = first_line_changed or last_line_changed or display_changed or zone_changed
+            needs_regenerate = first_line_changed or last_line_changed or display_changed or reserve_badge_changed or zone_changed
 
             # Reload staff_profile to ensure we have the latest data
             staff_profile.refresh_from_db()
@@ -801,6 +807,10 @@ def edit_badge(request, badge_id):
                     changes.append(f'นามสกุล: "{old_last_line}" → "{staff_profile.last_line}"')
                 if display_changed:
                     changes.append(f'ชื่อบนบัตร: "{old_display_name or staff_profile.full_name}" → "{staff_profile.display_name or staff_profile.full_name}"')
+                if reserve_badge_changed:
+                    old_reserve_text = 'บัตรสำรอง (ไม่แสดงชื่อ)' if old_is_reserve_badge else 'บัตรปกติ (แสดงชื่อ)'
+                    new_reserve_text = 'บัตรสำรอง (ไม่แสดงชื่อ)' if staff_profile.is_reserve_badge else 'บัตรปกติ (แสดงชื่อ)'
+                    changes.append(f'ประเภทบัตร: {old_reserve_text} → {new_reserve_text}')
                 if zone_changed:
                     old_zone_text = f'{old_zone.code} - {old_zone.name}' if old_zone else '-'
                     new_zone_text = f'{staff_profile.zone.code} - {staff_profile.zone.name}' if staff_profile.zone else '-'

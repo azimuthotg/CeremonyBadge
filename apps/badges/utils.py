@@ -151,32 +151,40 @@ def generate_badge_image(staff_profile, badge_number, photo=None):
 
     # 3. ชื่อ 2 บรรทัด (เฉพาะบัตรสีชมพูและสีแดง - บัตรสีเหลืองและสีเขียวไม่ต้องแสดงชื่อ)
     if badge_type_color in ['pink', 'red']:
-        # ใช้ display_name ถ้ามี มิฉะนั้นใช้ first_line/last_line
-        if staff_profile.display_name:
-            # แยกบรรทัดด้วย | (เช่น "ศ. ดร.นายแพทย์กระแส|ชนะวงศ์")
-            name_lines = staff_profile.display_name.split('|')
+        # ✅ ลำดับความสำคัญ:
+        # 1. ถ้า is_reserve_badge = True → ไม่แสดงชื่อเลย (เว้นว่าง)
+        # 2. ถ้ามี display_name → แสดง display_name
+        # 3. ถ้าไม่มี display_name → แสดงชื่อจริง (first_line + last_line)
 
-            if len(name_lines) == 2:
-                # มี 2 บรรทัด (บรรทัด 1 | บรรทัด 2) - ขยับขึ้น 40px (ปรับลงมา 10px จาก 410)
-                name_y = badge_height - 400
-                draw.text((30, name_y), name_lines[0].strip(), fill=text_color, font=font_bold)
+        if not staff_profile.is_reserve_badge:
+            # ไม่ใช่บัตรสำรอง → แสดงชื่อตามปกติ
+            # ใช้ display_name ถ้ามี มิฉะนั้นใช้ first_line/last_line
+            if staff_profile.display_name:
+                # แยกบรรทัดด้วย | (เช่น "ศ. ดร.นายแพทย์กระแส|ชนะวงศ์")
+                name_lines = staff_profile.display_name.split('|')
 
-                # นามสกุล - บรรทัดที่ 2
-                name_y += 60
-                draw.text((30, name_y), name_lines[1].strip(), fill=text_color, font=font_bold)
+                if len(name_lines) == 2:
+                    # มี 2 บรรทัด (บรรทัด 1 | บรรทัด 2) - ขยับขึ้น 40px (ปรับลงมา 10px จาก 410)
+                    name_y = badge_height - 400
+                    draw.text((30, name_y), name_lines[0].strip(), fill=text_color, font=font_bold)
+
+                    # นามสกุล - บรรทัดที่ 2
+                    name_y += 60
+                    draw.text((30, name_y), name_lines[1].strip(), fill=text_color, font=font_bold)
+                else:
+                    # แสดงบรรทัดเดียว (ไม่มี |) - ปรับลงมา 10px
+                    name_y = badge_height - 380
+                    draw.text((30, name_y), staff_profile.display_name, fill=text_color, font=font_bold)
             else:
-                # แสดงบรรทัดเดียว (ไม่มี |) - ปรับลงมา 10px
-                name_y = badge_height - 380
-                draw.text((30, name_y), staff_profile.display_name, fill=text_color, font=font_bold)
-        else:
-            # ใช้ first_line และ last_line
-            # บรรทัด 1: ยศชื่อ (ไม่เว้นวรรค) - ขยับขึ้น 40px (ปรับลงมา 10px จาก 410)
-            name_y = badge_height - 400
-            draw.text((30, name_y), staff_profile.first_line, fill=text_color, font=font_bold)
+                # ใช้ first_line และ last_line
+                # บรรทัด 1: ยศชื่อ (ไม่เว้นวรรค) - ขยับขึ้น 40px (ปรับลงมา 10px จาก 410)
+                name_y = badge_height - 400
+                draw.text((30, name_y), staff_profile.first_line, fill=text_color, font=font_bold)
 
-            # บรรทัด 2: นามสกุล
-            name_y += 60  # ขึ้นบรรทัดใหม่
-            draw.text((30, name_y), staff_profile.last_line, fill=text_color, font=font_bold)
+                # บรรทัด 2: นามสกุล
+                name_y += 60  # ขึ้นบรรทัดใหม่
+                draw.text((30, name_y), staff_profile.last_line, fill=text_color, font=font_bold)
+        # ถ้า is_reserve_badge = True → ไม่ทำอะไร (เว้นว่าง, ไม่แสดงชื่อ)
 
     # 4. หน้าที่/ตำแหน่ง - ปรับ X ให้อยู่กลางโลโก้ตามความยาวข้อความ
     position_text = f" {staff_profile.position}"  # เพิ่มช่องว่างหน้า
